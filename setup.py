@@ -21,7 +21,7 @@ setup(
         'Programming Language :: Python :: 3.8'
     ],
     keywords='microscopy cellpose tif C01',
-    url='https://gitlab.umich.edu/sextonlab/tools/cellimgs',
+    url='https://github.com/SextonLab/cell-imgs',
     author='bhalliga',
     author_email='bhalliga@med.umich.edu',
     license='MIT',
