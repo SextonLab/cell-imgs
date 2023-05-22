@@ -1,4 +1,4 @@
-from importlib_metadata import entry_points
+from importlib.metadata import entry_points
 from setuptools import setup
 
 def readme():
@@ -12,7 +12,7 @@ if os.name =='nt':
 
 setup(
     name='cellimgs',
-    version='0.60',
+    version='0.61',
     description='Set of scripts to use on cell images',
     long_description=readme(),
     classifiers=[
