@@ -1,7 +1,8 @@
 cellpose
 click
-javabridge 
-importlib_metadata
+# javabridge 
+# importlib_metadata
+importlib-metadata
 natsort
 numba
 numpy
