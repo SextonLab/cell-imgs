@@ -37,4 +37,9 @@ def gen_masks(
     for i, f in enumerate(images):
         # check if the mask already exists
         fname = os.apth.join(outdir, names[i])
-        
+        if not os.path.exists(fname):
+            img = tif.imread(f)
+            mask, _, _ = model.eval(img, diameter=diam, channel=channel)
+            if no_edge:
+                mask = utils.remove_edge_masks(mask)
+            tif.imsave(fname, mask.astype('uint16'))
