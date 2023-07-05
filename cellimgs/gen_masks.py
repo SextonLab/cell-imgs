@@ -13,7 +13,7 @@ import tifffile as tif
 
 from cellpose import models, utils
 
-from logger import logger
+from .logger import logger
 
 @click.command()
 @click.argument('imgdir')

@@ -12,7 +12,7 @@ if os.name =='nt':
 
 setup(
     name='cellimgs',
-    version='0.61',
+    version='0.70',
     description='Set of scripts to use on cell images',
     long_description=readme(),
     classifiers=[
@@ -28,9 +28,12 @@ setup(
     packages=['cellimgs'],
     entry_points = {
         'console_scripts' : [
-            'gen-masks=cellimgs.scripts:generate_masks',
-            'convert-c01=cellimgs.scripts:convert',
-            'max-proj=cellimgs.scripts:max_project',
+            # 'gen-masks=cellimgs.scripts:generate_masks',
+            'gen-masks=cellimgs.gen_masks:generate_masks',
+            # 'convert-c01=cellimgs.scripts:convert',
+            'convert-c01=cellimgs.convert:convert',
+            # 'max-proj=cellimgs.scripts:max_project',
+            'max-proj=cellimgs.max_proj:max_project',
             'masker=gui.main:main',
             ]
     },

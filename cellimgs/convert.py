@@ -14,7 +14,7 @@ import tifffile as tif
 import javabridge
 import bioformats
 
-from logger import logger
+from .logger import logger
 
 @click.command()
 @click.argument('indir')
