@@ -18,7 +18,7 @@ from .logger import logger
 @click.command()
 @click.argument('imgdir')
 @click.argument('outdir')
-@click.option('--diam','-d', default=0, help='Cell diameter')
+@click.option('--diam','-d', default=0.0, help='Cell diameter')
 @click.option('--channel','-c', default='*', required=False, help='Channels to segement')
 @click.option('--model', '-m',default='cyto', required=False, help='Model')
 @click.option('--no_edge', '-n', is_flag=True, default=False, required=False, help="Extra step to remove cells on the edge of masks")
