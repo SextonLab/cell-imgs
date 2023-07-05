@@ -1,34 +1,19 @@
 from email.policy import default
 import os
+import re
+import glob
 
 import click
 import pandas as pd
 import numpy as np
 
-import re # REEEE
-import glob
-
 from progress.bar import Bar
 
 import tifffile as tif
-import matplotlib.pyplot as plt
 
 from cellpose import models, utils
 
-import javabridge
-import bioformats
-
-from datetime import date
-
-
-def logger(path, args):
-    print("Logfile saved to :",os.path.join(path,"log.txt"))
-    with open(os.path.join(path,"log.txt"), "w") as f:
-        today = str(date.today())+"\n"
-        f.write(today)
-        for k in args.keys():
-            line = f"{k}:{args[k]}\n"
-            f.write(line)
+from .logger import logger
 
 @click.command()
 @click.argument('imgdir')
@@ -90,59 +75,3 @@ def generate_masks(imgdir, outdir, diam, channel, model, no_edge, flow, prob, re
     
     if count:
         pd.DataFrame(data=cell_count).to_csv(csv_path, index=False)
-
-
-@click.command()
-@click.argument('indir')
-@click.argument('outdir')
-@click.option('--channel','-c', default='*', help='Specific Channel')
-def convert(indir, outdir, channel):
-    if os.name =='nt':
-        os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
-    assert os.path.exists(indir), "C01 Directory doesn't exist"
-    assert os.path.exists(outdir), "TIF directory doens't exist"
-
-    logger(outdir, locals())
-
-    javabridge.start_vm(class_path=bioformats.JARS)
-    path = os.path.join(indir, f'*{channel}.C01')
-    files = glob.glob(path)
-    bar = Bar('converting',max=len(files))
-    for f in files:
-        filename = os.path.join(outdir,re.search(r'(MFGTMP_\d+_\w+)', f, re.IGNORECASE).group(1)+'.tif')
-        data = bioformats.ImageReader(f).read()
-        # data = data.astype('float16')
-        tif.imsave(filename, data=data)
-        bar.next()
-    bar.finish()
-    javabridge.kill_vm()
-
-
-def _get_axis(a,b,c):
-    if a<b and a<c:
-        return 0
-    elif b<a and b<c:
-        return 1
-    else:
-        return 2
-
-@click.command()
-@click.argument('indir')
-@click.argument('outdir')
-@click.option('--channel', "-c", default="*", required=False, help="Channel")
-def max_project(indir, outdir, channel):
-    assert os.path.exists(indir), "Zstack directory does not exist"
-    if not os.path.exists(outdir):
-        print(f"Missing output directory... creating directory {outdir}")
-        os.mkdir(outdir)
-    logger(outdir, locals())
-    files = glob.glob(os.path.join(indir, f"{channel}.tif"))
-    for f in files:
-        fn = f.split(os.sep)[-1]
-        print(fn)
-        img = tif.imread(f)
-        assert len(img.shape) == 3,f"Image {f} is not 3 dimensional"
-        out = np.max(img, axis=_get_axis(img.shape))
-        fname = os.path.join(outdir, fn)
-        tif.imsave(fname, data=out)
-        
