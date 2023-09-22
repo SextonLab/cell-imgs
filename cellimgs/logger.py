@@ -10,8 +10,9 @@ from cellpose import models, utils
 
 from datetime import date
 
-def logger(path, *args):
+def logger(path, args):
     print("Logfile saved to :",os.path.join(path,"log.txt"))
+
     with open(os.path.join(path,"log.txt"), "w") as f:
         today = str(date.today())+"\n"
         f.write(today)
