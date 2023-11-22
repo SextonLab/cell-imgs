@@ -25,7 +25,7 @@ def _get_channel(color):
     if len(color)>2:
         channel = [[0,0]]
     else:
-        channel =[[_cmap[color[0], _cmap[1]]]]
+        channel =[[_cmap[color[0]], _cmap[color[1]]]]
     return channel
 
 @click.command()
