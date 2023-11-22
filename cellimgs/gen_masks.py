@@ -15,6 +15,19 @@ from cellpose import models, utils
 
 from .logger import logger
 
+_cmap = {'r':1,'g':2,'b':3}
+
+def _get_channel(color):
+    """
+    get channel for doing color images (none=0, red=1, 2=green, 3=blue)
+    grey [[0,0]]
+    """
+    if len(color)>2:
+        channel = [[0,0]]
+    else:
+        channel =[[_cmap[color[0], _cmap[1]]]]
+    return channel
+
 @click.command()
 @click.argument('imgdir')
 @click.argument('outdir')
@@ -26,8 +39,9 @@ from .logger import logger
 @click.option('--prob', '-p', default=0.0, required=False, help='Cell probability')
 @click.option('--replace', '-r', is_flag=True, default=False, required=False, help='Replace existing masks')
 @click.option('--count', is_flag=True, default=False, required=False, help='Create csv in mask folder of image cell counts')
+@click.option('--color', default='grey', required=False, help='rgb value of cyto and nucleus ex. rg: red ctyo, green nuc')
 # @click.option('--do_3d', is_flag=True, default=False, required=False, help='Do 3d segmentation') # DO 3D not working
-def generate_masks(imgdir, outdir, diam, channel, model, no_edge, flow, prob, replace, count):  # , do_3d
+def generate_masks(imgdir, outdir, diam, channel, model, no_edge, flow, prob, replace, count, color):  # , do_3d
     if os.name =='nt':
         os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
     assert os.path.exists(imgdir), "Image Directory doesn't exist"
@@ -49,7 +63,7 @@ def generate_masks(imgdir, outdir, diam, channel, model, no_edge, flow, prob, re
     nimg = len(files)
     assert nimg > 0, "no images found"
     
-    channels = [[0,0]] # black and white images
+    channels = _get_channel(color=color) # black and white images
     if diam <= 0:
         diam = None
     
