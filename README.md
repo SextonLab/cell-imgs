@@ -67,6 +67,12 @@ Generates max projections of tif stacks from `imagedir` and saves them to `stack
 
 To convert a specific channel use option `--channel` or `-c` followed by channel (i.e. C1, d0, etc)
 
+### Color Merging
+
+`cmerge indir outdir red green blue`
+
+Merges single channel tifs `indir` into multichannel RGB tifs `outdir` where `red`, `green` and `blue` correspond to image channel ID
+
 ## GUI Generate Masks
 
 TODO: Add instructions and pictures for this bad boy
