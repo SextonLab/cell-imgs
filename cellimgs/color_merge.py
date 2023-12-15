@@ -13,11 +13,11 @@ import tifffile as tif
 from .logger import logger
 
 @click.command()
-@click.argument('indir', help='Input Directory')
-@click.argument('outdir', help='Output Directory')
-@click.argument('red', help='Red Channel ID')
-@click.argument('grn', help='Green Channel ID')
-@click.argument('blu', help='Blue Channel ID')
+@click.argument('indir')
+@click.argument('outdir')
+@click.argument('red')
+@click.argument('grn')
+@click.argument('blu')
 @click.option('--replace', '-r', default=False, is_flag=True, help="Replace existing color channels")
 def merge_channel(indir:str, outdir:str, red, grn, blu, repalce=False):
     """
