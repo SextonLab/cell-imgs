@@ -19,7 +19,7 @@ from .logger import logger
 @click.argument('grn')
 @click.argument('blu')
 @click.option('--replace', '-r', default=False, is_flag=True, help="Replace existing color channels")
-def merge_channel(indir:str, outdir:str, red, grn, blu, repalce=False):
+def merge_channel(indir:str, outdir:str, red, grn, blu, replace):
     """
     Merge Color 3 single channel tifs into a single rgb tif
     indir: directory where single channel tifs live
@@ -45,7 +45,7 @@ def merge_channel(indir:str, outdir:str, red, grn, blu, repalce=False):
     bar = Bar('Merging...', max=len(files))
     for f in files:
         fname = os.path.join(outdir, f+".tif")
-        if not os.path.exists(fname) and not repalce:
+        if not os.path.exists(fname) and not replace:
             img[0,:,:] = tif.imread(f+red+".tif")
             img[1,:,:] = tif.imread(f+grn+".tif")
             img[2,:,:] = tif.imread(f+blu+".tif")
