@@ -31,12 +31,14 @@ def max_project(indir, outdir, channel):
         print(f"Missing output directory... creating directory {outdir}")
         os.mkdir(outdir)
     logger(outdir, locals())
-    files = glob.glob(os.path.join(indir, f"{channel}.tif"))
+    files = glob.glob(os.path.join(indir, f"*{channel}.tif"))
+    # print(files[:2])
     for f in files:
         fn = f.split(os.sep)[-1]
         print(fn)
         img = tif.imread(f)
         assert len(img.shape) == 3,f"Image {f} is not 3 dimensional"
-        out = np.max(img, axis=_get_axis(img.shape))
+        a, b,c = img.shape
+        out = np.max(img, axis=_get_axis(a,b,c))
         fname = os.path.join(outdir, fn)
         tif.imsave(fname, data=out)
