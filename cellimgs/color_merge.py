@@ -44,7 +44,7 @@ def merge_channel(indir:str, outdir:str, red, grn, blu, replace):
     files = [f[:-remove] for f in names]
     bar = Bar('Merging...', max=len(files))
     for f in files:
-        fname = os.path.join(outdir, f+".tif")
+        fname = os.path.join(outdir, os.path.basename(f)+".tif")
         if not os.path.exists(fname) and not replace:
             img[0,:,:] = tif.imread(f+red+".tif")
             img[1,:,:] = tif.imread(f+grn+".tif")
