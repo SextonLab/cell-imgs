@@ -23,12 +23,15 @@ pip install -e .
 Javabridge and Bioformats will need to be installed manually
 
 - https://github.com/LeeKamentsky/python-javabridge
-- https://github.com/CellProfiler/python-bioformats
+- https://github.com/CellProfiler/python-bioformats or https://github.com/LeeKamentsky/bioformats
 
 Where bioformats will need to be installed without dependencies
 
 ```
-pip install . --no-deps
+git clone https://github.com/LeeKamentsky/python-javabridge.git
+cd python-javabridge
+pip install .
+pip install python-bioformats --no-deps
 ```
 
 ### Windows
