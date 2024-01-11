@@ -18,6 +18,19 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
+### Javabridge and Bioformats
+
+Javabridge and Bioformats will need to be installed manually
+
+- https://github.com/LeeKamentsky/python-javabridge
+- https://github.com/CellProfiler/python-bioformats
+
+Where bioformats will need to be installed without dependencies
+
+```
+pip install . --no-deps
+```
+
 ### Windows
 
 You'll need to download and install visual studio and the Microsoft C++ build tools
