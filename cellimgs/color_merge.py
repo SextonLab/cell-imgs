@@ -46,7 +46,6 @@ def merge_channel(indir:str, outdir:str, red, grn, blu, replace):
     assert len(red_name) == len(grn_name) & len(red_name) == len(blu_name), f"Different number of images per color channel\nRED:{len(red_name)}\nGreen{len(grn_name)}\nBlue{len(blu_name)}"
     
     files = [f[:-7]+".tif" for f in red_name]
-    print(files[:4])
     
     bar = Bar('Merging...', max=len(files))
     for i,f in enumerate(files):
