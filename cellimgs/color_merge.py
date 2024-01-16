@@ -35,20 +35,27 @@ def merge_channel(indir:str, outdir:str, red, grn, blu, replace):
         print(f"Output Directory doesn't exist, creating directory: ",{outdir})
         os.mkdir(outdir)
     
-    names = glob.glob(os.path.join(indir, "*"+red+".tif")) # get all of the images needed
+    red_name = glob.glob(os.path.join(indir, "*"+red+".tif")) # get all of the images needed
+    grn_name = glob.glob(os.path.join(indir, "*"+grn+".tif"))
+    blu_name = glob.glob(os.path.join(indir, "*"+blu+".tif"))
      
-    img = tif.imread(names[0])
+    img = tif.imread(red_name[0])
     x,y = img.shape
     img = np.zeros((3, x, y))
-    remove = len(red)+4
-    files = [f[:-remove] for f in names]
+    
+    assert len(red_name) == len(grn_name) & len(red_name) == len(blu_name), f"Different number of images per color channel\nRED:{len(red_name)}\nGreen{len(grn_name)}\nBlue{len(blu_name)}"
+    
+    files = [f[:-7]+".tif" for f in red_name]
+    print(files[:4])
+    
     bar = Bar('Merging...', max=len(files))
-    for f in files:
-        fname = os.path.join(outdir, os.path.basename(f)+".tif")
+    for i,f in enumerate(files):
+        fname = os.path.join(outdir, os.path.basename(f))
         if not os.path.exists(fname) and not replace:
-            img[0,:,:] = tif.imread(f+red+".tif")
-            img[1,:,:] = tif.imread(f+grn+".tif")
-            img[2,:,:] = tif.imread(f+blu+".tif")
+            img[0,:,:] = tif.imread(red_name[i])
+            img[1,:,:] = tif.imread(grn_name[i])
+            img[2,:,:] = tif.imread(blu_name[i])
             tif.imwrite(fname, img)
         bar.next()
     bar.finish()
+    
