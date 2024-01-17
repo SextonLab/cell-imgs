@@ -16,7 +16,7 @@ from cellpose import models, utils
 
 from .logger import logger
 
-_cmap = {'r':1,'g':2,'b':3}
+CMAP = {'r':1,'g':2,'b':3}
 
 def _get_channel(color):
     """
@@ -26,7 +26,7 @@ def _get_channel(color):
     if len(color)>2:
         channel = [[0,0]]
     else:
-        channel =[[_cmap[color[0]], _cmap[color[1]]]]
+        channel =[[CMAP[color[0]], CMAP[color[1]]]]
     return channel
 
 parser = argparse.ArgumentParser(description="Generate Masks from tifs")
@@ -44,6 +44,7 @@ parser.add_argument('-f', '--flow', default=0.4)
 parser.add_argument('-p', '--prob', default=0.0)
 parser.add_argument('-r','--replace', action='store_true', default=False)
 parser.add_argument('--count', action="store_true", default=False)
+parser.add_argument('--color', default='grey', required=False, help='rgb value of cyto and nucleus ex. rg: red ctyo, green nuc')
 args = parser.parse_args()
 
 
