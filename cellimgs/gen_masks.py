@@ -49,8 +49,8 @@ def generate_masks(imgdir, outdir, diam, channel, model, no_edge, flow, prob, re
     if not os.path.exists(outdir):
         print(f"Creating output directory: {outdir}")
         os.mkdir(outdir)
-    assert diam >= 0.0, "Diameter must be greater than zero"
-    assert flow > 0.0, "Flow threshold must be greater than zero"
+    # assert diam >= 0.0, "Diameter must be greater than zero"
+    # assert flow > 0.0, "Flow threshold must be greater than zero"
     if not os.path.exists(os.path.join(outdir, 'counts.csv')) & count:
         csv_path = os.path.join(outdir, 'count.csv')
         cell_count = {"image":[], "count":[]}
