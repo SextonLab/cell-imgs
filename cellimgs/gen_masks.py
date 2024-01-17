@@ -2,6 +2,7 @@ from email.policy import default
 import os
 import re
 import glob
+import argparse
 
 import click
 import pandas as pd
@@ -27,6 +28,24 @@ def _get_channel(color):
     else:
         channel =[[_cmap[color[0]], _cmap[color[1]]]]
     return channel
+
+parser = argparse.ArgumentParser(description="Generate Masks from tifs")
+
+# positional image and mask diretory
+parser.add_argument("images", type=str, help="Source Tiffs")
+parser.add_argument("masks", type=str, help="Mask Destination")
+
+# Optional flagged arguments
+parser.add_argument("-d", "--diam", default=0.0)
+parser.add_argument('-c', '--channel', default='*')
+parser.add_argument('-m', '--model', default='cyto')
+parser.add_argument('-n','--no_edge', action='store_true', default=False)
+parser.add_argument('-f', '--flow', default=0.4)
+parser.add_argument('-p', '--prob', default=0.0)
+parser.add_argument('-r','--replace', action='store_true', default=False)
+parser.add_argument('--count', action="store_true", default=False)
+args = parser.parse_args()
+
 
 @click.command()
 @click.argument('imgdir')
