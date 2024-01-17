@@ -45,16 +45,15 @@ def generate_masks(imgdir, outdir, diam, channel, model, no_edge, flow, prob, re
     if os.name =='nt':
         os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
     assert os.path.exists(imgdir), "Image Directory doesn't exist"
-    # assert os.path.exists(outdir), "Mask directory doens't exist"
     if not os.path.exists(outdir):
         print(f"Creating output directory: {outdir}")
         os.mkdir(outdir)
-    # assert diam >= 0.0, "Diameter must be greater than zero"
-    # assert flow > 0.0, "Flow threshold must be greater than zero"
+    assert diam >=0.0, "Diameter must not be zero"
+    assert flow >= 0.0, "Flow threshold must not be zero"
+    # assert prob >= 0.0, "Cell probability must not be zero"
     if not os.path.exists(os.path.join(outdir, 'counts.csv')) & count:
         csv_path = os.path.join(outdir, 'count.csv')
         cell_count = {"image":[], "count":[]}
-    # assert prob >= 0.0, "Cell probability must be greater or equal to zero"
     exten = os.path.join(imgdir, f"*{channel}.tif")
     exten2 = os.path.join(imgdir, f"*{channel}.tiff")
     files = glob.glob(exten) + glob.glob(exten2)
