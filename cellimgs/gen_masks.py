@@ -16,7 +16,6 @@ from cellpose import models, utils
 
 from .logger import logger
 
-<<<<<<< HEAD
 CMAP = {'r':1,'g':2,'b':3}
 
 def _get_channel(color):
@@ -30,8 +29,6 @@ def _get_channel(color):
         channel =[[CMAP[color[0]], CMAP[color[1]]]]
     return channel
 
-=======
->>>>>>> d58238e9e8de1f832c753225d0bbc473b9f85e1d
 parser = argparse.ArgumentParser(description="Generate Masks from tifs")
 
 # positional image and mask diretory
