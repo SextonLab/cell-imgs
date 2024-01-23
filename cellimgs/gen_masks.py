@@ -15,7 +15,7 @@ from cellpose import models, utils
 
 from .logger import logger
 
-_cmap = {'r':1,'g':2,'b':3}
+CMAP = {'r':1,'g':2,'b':3}
 
 def _get_channel(color):
     """
@@ -25,7 +25,7 @@ def _get_channel(color):
     if len(color)>2:
         channel = [[0,0]]
     else:
-        channel =[[_cmap[color[0]], _cmap[color[1]]]]
+        channel =[[CMAP[color[0]], CMAP[color[1]]]]
     return channel
 
 @click.command()
