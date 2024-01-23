@@ -17,36 +17,28 @@ from .logger import logger
 
 CMAP = {'r':1,'g':2,'b':3}
 
-def _get_channel(color):
-    """
-    get channel for doing color images (none=0, red=1, 2=green, 3=blue)
-    grey [[0,0]]
-    """
-    if len(color)>2:
-        channel = [[0,0]]
-    else:
-        channel =[[CMAP[color[0]], CMAP[color[1]]]]
-    return channel
 
-parser = argparse.ArgumentParser(description="Generate Masks from tifs")
 
-# positional image and mask diretory
-parser.add_argument("images", type=str, help="Source Tiffs")
-parser.add_argument("masks", type=str, help="Mask Destination")
-
-# Optional flagged arguments
-parser.add_argument("-d", "--diam", type=float, default=0.0)
-parser.add_argument('-c', '--channel', type=str, default='*')
-parser.add_argument('-m', '--model', type=str, default='cyto') # possibly add all options as choices
-parser.add_argument('-n','--no_edge', action='store_true', default=False) 
-parser.add_argument('-f', '--flow', type=float, default=0.4)
-parser.add_argument('-p', '--prob', type=float, default=0.0)
-parser.add_argument('-r','--replace', action='store_true', default=False)
-parser.add_argument('--count', action="store_true", default=False)
-parser.add_argument('--color', type=str, default='grey', required=False, help='rgb value of cyto and nucleus ex. rg: red ctyo, green nuc')
-args = parser.parse_args()
 
 def generate_masks():
+    parser = argparse.ArgumentParser(description="Generate Masks from tifs")
+
+    # positional image and mask diretory
+    parser.add_argument("images", type=str, help="Source Tiffs")
+    parser.add_argument("masks", type=str, help="Mask Destination")
+
+    # Optional flagged arguments
+    parser.add_argument("-d", "--diam", type=float, default=0.0)
+    parser.add_argument('-c', '--channel', type=str, default='*')
+    parser.add_argument('-m', '--model', type=str, default='cyto') # possibly add all options as choices
+    parser.add_argument('-n','--no_edge', action='store_true', default=False) 
+    parser.add_argument('-f', '--flow', type=float, default=0.4)
+    parser.add_argument('-p', '--prob', type=float, default=0.0)
+    parser.add_argument('-r','--replace', action='store_true', default=False)
+    parser.add_argument('--count', action="store_true", default=False)
+    parser.add_argument('--color', type=str, default='grey', required=False, help='rgb value of cyto and nucleus ex. rg: red ctyo, green nuc')
+    args = parser.parse_args()
+
     if os.name =='nt':
         os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
     assert os.path.exists(args.images), "Image Directory doesn't exist"
@@ -93,3 +85,15 @@ def generate_masks():
     
     if args.count:
         pd.DataFrame(data=cell_count).to_csv(csv_path, index=False)
+        
+
+def _get_channel(color):
+    """
+    get channel for doing color images (none=0, red=1, 2=green, 3=blue)
+    grey [[0,0]]
+    """
+    if len(color)>2:
+        channel = [[0,0]]
+    else:
+        channel =[[CMAP[color[0]], CMAP[color[1]]]]
+    return channel
