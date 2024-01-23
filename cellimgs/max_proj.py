@@ -3,7 +3,7 @@ import os
 import re
 import glob
 
-import click
+import argparse
 import pandas as pd
 import numpy as np
 
@@ -21,17 +21,19 @@ def _get_axis(a,b,c):
     else:
         return 2
 
-@click.command()
-@click.argument('indir')
-@click.argument('outdir')
-@click.option('--channel', "-c", default="*", required=False, help="Channel")
-def max_project(indir, outdir, channel):
-    assert os.path.exists(indir), "Zstack directory does not exist"
-    if not os.path.exists(outdir):
-        print(f"Missing output directory... creating directory {outdir}")
-        os.mkdir(outdir)
-    logger(outdir, locals())
-    files = glob.glob(os.path.join(indir, f"*{channel}.tif"))
+parser = argparse.ArgumentParser(description="Maximum projection for zstacked tifs")
+
+parser.add_argument("indir", type=str, help="Input directory")
+parser.add_argument("outdir", type=str, help="Output directory")
+parser.add_argument("--channel","-c", default="*", required=False, help="Channel")
+args = parser.parse_args()
+def max_project():
+    assert os.path.exists(args.indir), "Zstack directory does not exist"
+    if not os.path.exists(args.outdir):
+        print(f"Missing output directory... creating directory {args.outdir}")
+        os.mkdir(args.outdir)
+    logger(args.outdir, locals())
+    files = glob.glob(os.path.join(args.indir, f"*{args.channel}.tif"))
     # print(files[:2])
     for f in files:
         fn = f.split(os.sep)[-1]
@@ -40,5 +42,5 @@ def max_project(indir, outdir, channel):
         assert len(img.shape) == 3,f"Image {f} is not 3 dimensional"
         a, b,c = img.shape
         out = np.max(img, axis=_get_axis(a,b,c))
-        fname = os.path.join(outdir, fn)
+        fname = os.path.join(args.outdir, fn)
         tif.imsave(fname, data=out)
