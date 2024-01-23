@@ -3,7 +3,7 @@ import os
 import re
 import glob
 
-import click
+import argparse
 import numpy as np
 
 from progress.bar import Bar
@@ -12,14 +12,19 @@ import tifffile as tif
 
 from .logger import logger
 
-@click.command()
-@click.argument('indir')
-@click.argument('outdir')
-@click.argument('red')
-@click.argument('grn')
-@click.argument('blu')
-@click.option('--replace', '-r', default=False, is_flag=True, help="Replace existing color channels")
-def merge_channel(indir:str, outdir:str, red, grn, blu, replace):
+
+parser = argparse.ArgumentParser(description="Merge Color channels from sinlge channel tiff to multichannel tifs")
+
+parser.add_argument("indir", type=str, help="Input directory")
+parser.add_argument("outdir", type=str, help="Output directory")
+parser.add_argument("red", type=str, help='Red channel')
+parser.add_argument("grn", type=str, help="Green channel")
+parser.add_argument("blu", type=str, help="Blue channel")
+
+parser.add_argument("--replace", "-r", default=False, action='store_true',help="Repalce existing images")
+
+args = parser.parse_args()
+def merge_channel():
     """
     Merge Color 3 single channel tifs into a single rgb tif
     indir: directory where single channel tifs live
@@ -29,15 +34,15 @@ def merge_channel(indir:str, outdir:str, red, grn, blu, replace):
     blu: blue channel id
     replace: flag to repalce existing files
     """
-    logger(outdir, locals())
-    assert os.path.exists(indir), "Input directory doesn't exist"
-    if not os.path.exists(outdir):
-        print(f"Output Directory doesn't exist, creating directory: ",{outdir})
-        os.mkdir(outdir)
+    logger(args.outdir, locals())
+    assert os.path.exists(args.indir), "Input directory doesn't exist"
+    if not os.path.exists(args.outdir):
+        print(f"Output Directory doesn't exist, creating directory: ",{args.outdir})
+        os.mkdir(args.outdir)
     
-    red_name = glob.glob(os.path.join(indir, "*"+red+".tif")) # get all of the images needed
-    grn_name = glob.glob(os.path.join(indir, "*"+grn+".tif"))
-    blu_name = glob.glob(os.path.join(indir, "*"+blu+".tif"))
+    red_name = glob.glob(os.path.join(args.indir, "*"+args.red+".tif")) # get all of the images needed
+    grn_name = glob.glob(os.path.join(args.indir, "*"+args.grn+".tif"))
+    blu_name = glob.glob(os.path.join(args.indir, "*"+args.blu+".tif"))
      
     img = tif.imread(red_name[0])
     x,y = img.shape
@@ -49,8 +54,8 @@ def merge_channel(indir:str, outdir:str, red, grn, blu, replace):
     
     bar = Bar('Merging...', max=len(files))
     for i,f in enumerate(files):
-        fname = os.path.join(outdir, os.path.basename(f))
-        if not os.path.exists(fname) and not replace:
+        fname = os.path.join(args.outdir, os.path.basename(f))
+        if not os.path.exists(fname) and not args.replace:
             img[0,:,:] = tif.imread(red_name[i])
             img[1,:,:] = tif.imread(grn_name[i])
             img[2,:,:] = tif.imread(blu_name[i])
