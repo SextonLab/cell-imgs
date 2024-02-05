@@ -32,8 +32,8 @@ setup(
             'convert-c01=cellimgs.convert:convert',
             'max-proj=cellimgs.max_proj:max_project',
             'cmerge=cellimgs.color_merge:merge_channel',
-            'masker=gui.main:main',
             'smash-tif=cellimgs.tifsmasher:smash_tif',
+            'masker=gui.main:main',
             ]
     },
     # install_requries=[
