@@ -15,7 +15,7 @@ SCOPES = ['CV8000', 'CQ1']
 @click.command()
 @click.argument('indir')
 @click.argument('outdir')
-@click.option('--scope', default='CV8000', help='Which Scope')
+@click.option('--scope','-s', required=False, default='CV8000', help='Which Scope')
 @click.option('--on_loc', default=False, help='Used to for search and destroy data')
 def smash_tif(indir, outdir, scope, on_loc=False):
     if os.name == 'nt':
