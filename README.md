@@ -91,7 +91,7 @@ Merges single channel tifs `indir` into multichannel RGB tifs `outdir` where `re
 
 ### Tif Smasher
 
-`smash-tif indir outidr`
+`smashtif indir outidr`
 
 Groups single tifs into a tif stacks for 3D segmentation and analysis
 
