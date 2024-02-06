@@ -5,7 +5,7 @@ click
 importlib-metadata
 natsort
 numba
-numpy==1.20.0
+numpy
 pandas
 progress
 PyQt5
