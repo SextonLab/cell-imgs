@@ -89,6 +89,18 @@ To convert a specific channel use option `--channel` or `-c` followed by channel
 
 Merges single channel tifs `indir` into multichannel RGB tifs `outdir` where `red`, `green` and `blue` correspond to image channel ID
 
+### Tif Smasher
+
+`smashtif indir outidr`
+
+Groups single tifs into a tif stacks for 3D segmentation and analysis
+
+#### Options
+
+- `--scope`, `-s` Change scope metadata [CV800, CQ1]
+- `--on_loc` Changes from Z stack to location 
+
+
 ## GUI Generate Masks
 
 TODO: Add instructions and pictures for this bad boy
