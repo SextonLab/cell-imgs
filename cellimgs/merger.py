@@ -6,19 +6,9 @@ import re # REEEE
 import glob
 import tifffile
 
-from ipyfilechooser import FileChooser
-from ipywidgets import *
 
 # CQ1 REGEX: (\w+)\/(W\d{4})(F\d{4})(T\d{4})(Z\d{3})(C\d)
 # CV800 REGEX: .*\/(.*)_(.*)_(T[0-9]{4})(F.*)L01A[0-9]{2}(Z[0-9]{2})(C[0-9]{2})\.tif
-
-def make_filechooser(title='Choose File'):
-    fc = FileChooser()
-    fc.show_hidden = True
-    fc.use_dir_icons = True
-    fc.show_only_dirs = True
-    fc.title = title
-    return fc
 
 
 def merge_images(channels, output, sub=1):
