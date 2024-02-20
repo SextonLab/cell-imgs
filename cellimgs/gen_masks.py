@@ -11,7 +11,7 @@ from progress.bar import Bar
 
 import tifffile as tif
 
-from cellpose import models, utils
+from cellpose import models, utils, resnet_torch
 
 from .logger import logger
 
