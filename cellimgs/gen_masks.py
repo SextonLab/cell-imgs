@@ -18,6 +18,7 @@ from .logger import logger
 import click
 
 CMAP = {'r':1,'g':2,'b':3}
+DENOISE_TEXT = ["filter", "none", "denoise", "deblur", "upsample"]
 
 def _get_channel(color):
     """
