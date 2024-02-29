@@ -11,7 +11,7 @@ from progress.bar import Bar
 
 import tifffile as tif
 
-from cellpose import models, utils, resnet_torch
+from cellpose import models, utils, resnet_torch, denoise
 
 from .logger import logger
 
@@ -31,20 +31,27 @@ def _get_channel(color):
         channel =[[CMAP[color[0]], CMAP[color[1]]]]
     return channel
 
+def compute_denoise_model(model_name):
+    # check if using cyto3 or nuclei model 
+    # make model name e.g. upsample_cyto3
+    
+    return denoise.DenoiseModel(gpu=True, model_type=model_name)
+
 @click.command()
 @click.argument('imgdir')
 @click.argument('outdir')
 @click.option('--diam','-d', default=0.0, help='Cell diameter')
 @click.option('--channel','-c', default='*', required=False, help='Channels to segement')
-@click.option('--model', '-m',default='cyto', required=False, help='Model')
+@click.option('--model', '-m', default='cyto', required=False, help='Model')
 @click.option('--no_edge', '-n', is_flag=True, default=False, required=False, help="Extra step to remove cells on the edge of masks")
 @click.option('--flow', '-f', default=0.4, required=False, help='Flow threshold')
 @click.option('--prob', '-p', default=0.0, required=False, help='Cell probability')
 @click.option('--replace', '-r', is_flag=True, default=False, required=False, help='Replace existing masks')
 @click.option('--count', is_flag=True, default=False, required=False, help='Create csv in mask folder of image cell counts')
 @click.option('--color', default='grey', required=False, help='rgb value of cyto and nucleus ex. rg: red ctyo, green nuc')
+@click.option('--denoise', '-dn',required=False, multiple=True, default=None, help="List of denoise features e.g. -dn upsample -dn denoise")
 # @click.option('--do_3d', is_flag=True, default=False, required=False, help='Do 3d segmentation') # DO 3D not working
-def generate_masks(imgdir, outdir, diam, channel, model, no_edge, flow, prob, replace, count, color):  # , do_3d
+def generate_masks(imgdir, outdir, diam, channel, model, no_edge, flow, prob, replace, count, color, denoise):  # , do_3d
     if os.name =='nt':
         os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
     assert os.path.exists(imgdir), "Image Directory doesn't exist"
@@ -53,6 +60,8 @@ def generate_masks(imgdir, outdir, diam, channel, model, no_edge, flow, prob, re
         os.mkdir(outdir)
     assert  diam >=0.0, "Diameter must not be zero"
     assert  flow >= 0.0, "Flow threshold must not be zero"
+    denoise = list(denoise)
+    model_type = "_".join(denoise)
     # assert prob >= 0.0, "Cell probability must not be zero"
     if not os.path.exists(os.path.join(outdir, 'counts.csv')) &  count:
         csv_path = os.path.join( outdir, 'count.csv')
@@ -60,6 +69,13 @@ def generate_masks(imgdir, outdir, diam, channel, model, no_edge, flow, prob, re
     exten = os.path.join(imgdir, f"*{ channel}.tif")
     exten2 = os.path.join(imgdir, f"*{ channel}.tiff")
     files = glob.glob(exten) + glob.glob(exten2)
+    
+    # if model is "cyto3":
+    #     print("Using Cyto 3 I see, your denoise steps are: ", denoise)
+    #     model = compute_denoise_model(denoise)
+    # else:
+    #     print("Loading Model: ", model)
+    #     model = models.CellposeModel(model_type= model, gpu=True)
     model = models.CellposeModel(model_type= model, gpu=True)
     # imgs = [tif.imread(f) for f in files]
     nimg = len(files)
