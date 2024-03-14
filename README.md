@@ -64,6 +64,12 @@ By default diameters are generated per image and masks are generated on all imag
 - `--do_3d` will use 3D segmentation [DEPRECATED]
 - `--color` with `rgb` in order of cyto and nucleus ex. `rg` for red cyto dye and green nuclear dye
 
+#### Using Customs models 
+
+If you are using a pre-cellpose3 model under the "Custom Model" section of the UI pass the name in parenthesis as model.
+
+**Example**: "cellpose (cyto2_cp3)" > `cyto2_cp3`
+
 ### Converting C01 images to TIFs
 
 `convert-c01 imgdir/ outdir/`
