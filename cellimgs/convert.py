@@ -24,8 +24,10 @@ def convert(indir, outdir, channel):
     if os.name =='nt':
         os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
     assert os.path.exists(indir), "C01 Directory doesn't exist"
-    assert os.path.exists(outdir), "TIF directory doens't exist"
-
+    # assert os.path.exists(outdir), "TIF directory doens't exist"
+    if not os.path.exists(outdir):
+        print("Creating Directory: ", outdir)
+        os.mkdir(outdir)
     logger(outdir, locals())
 
     javabridge.start_vm(class_path=bioformats.JARS)
