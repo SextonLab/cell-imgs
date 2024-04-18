@@ -35,7 +35,8 @@ def convert(indir, outdir, channel):
     files = glob.glob(path)
     bar = Bar('converting',max=len(files))
     for f in files:
-        filename = os.path.join(outdir,re.search(r'(MFGTMP_\d+_\w+)', f, re.IGNORECASE).group(1)+'.tif')
+        fname = os.path.splitext(os.path.basename(f))[0]+'.tif'
+        filename = os.path.join(outdir, fname)
         data = bioformats.ImageReader(f).read()
         # data = data.astype('float16')
         tif.imsave(filename, data=data)
