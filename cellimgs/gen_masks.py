@@ -35,7 +35,7 @@ def _get_channel(color):
 @click.argument('outdir')
 @click.option('--diam','-d', default=0.0, help='Cell diameter')
 @click.option('--channel','-c', default='*', required=False, help='Channels to segement')
-@click.option('--model', '-m',default='cyto', required=False, help='Model')
+@click.option('--model', '-m',default='cyto3', required=False, help='Model')
 @click.option('--no_edge', '-n', is_flag=True, default=False, required=False, help="Extra step to remove cells on the edge of masks")
 @click.option('--flow', '-f', default=0.4, required=False, help='Flow threshold')
 @click.option('--prob', '-p', default=0.0, required=False, help='Cell probability')
