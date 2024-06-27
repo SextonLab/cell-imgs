@@ -15,7 +15,7 @@ Group of python scripts and jupyter notebooks to convert C01 images to tifs, sta
 git clone git@github.com:SextonLab/cell-imgs.git
 cd cellimgs
 pip install -r requirements.txt
-pip install -e .
+pip install .
 ```
 
 ### Javabridge and Bioformats
