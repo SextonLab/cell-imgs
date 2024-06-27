@@ -62,7 +62,7 @@ By default diameters are generated per image and masks are generated on all imag
 - `--replace` or `-r` will replace all existing masks in the outdir instead of skipping them
 - `--count` will create a `count.csv` in the outdir containing image name and the cell count of the image
 - `--do_3d` will use 3D segmentation [DEPRECATED]
-- `--color` with `rgb` in order of cyto and nucleus ex. `rg` for red cyto dye and green nuclear dye
+- `--color` with `prgb` in order of cyto and nucleus ex. `rg` for red cyto dye and green nuclear dye (note `p` for ignoring other channels e.g. only blue channe `--color pb`)
 
 #### Using Customs models 
 
