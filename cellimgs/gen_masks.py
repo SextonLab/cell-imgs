@@ -17,7 +17,7 @@ from .logger import logger
 
 import click
 
-CMAP = {'r':1,'g':2,'b':3}
+CMAP = {'p':0,'r':1,'g':2,'b':3}
 
 def _get_channel(color):
     """
