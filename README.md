@@ -13,7 +13,7 @@ Group of python scripts and jupyter notebooks to convert C01 images to tifs, sta
 ### PIP install
 ```
 git clone git@github.com:SextonLab/cell-imgs.git
-cd cellimgs
+cd cell-imgs
 pip install -r requirements.txt
 pip install .
 ```
