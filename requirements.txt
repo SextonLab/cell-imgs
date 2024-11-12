@@ -18,3 +18,4 @@ scipy
 tifffile
 torch
 PyQt6
+tqdm
