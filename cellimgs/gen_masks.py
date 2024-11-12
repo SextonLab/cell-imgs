@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 
 from progress.bar import Bar
-
+from tqdm import tqdm
 import tifffile as tif
 
 from cellpose import models, utils
@@ -70,13 +70,11 @@ def generate_masks(imgdir, outdir, diam, channel, model, no_edge, flow, prob, re
     
     logger(outdir, locals())
 
-    # split on '/' then take the last element as image name
-    names = [f.split(os.sep)[-1] for f in files]
-    for i, f in enumerate(files):
+    names = [os.path.basename(f) for f in files] 
+    for i, f in enumerate(tqdm(files)):
         fname = os.path.join( outdir,names[i])
         if not os.path.exists(fname) or  replace:
             img = tif.imread(f)
-            print(f'Processing Image: {i+1} of {len(names)}')
             mask, _, _ = model.eval(img, diameter= diam, channels=channels, flow_threshold= flow, cellprob_threshold= prob) # , do_3d=do_3d
             if  no_edge:
                 mask = utils.remove_edge_masks(mask)
