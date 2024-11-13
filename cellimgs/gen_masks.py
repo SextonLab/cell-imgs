@@ -3,6 +3,7 @@ import os
 import re
 import glob
 import argparse
+import json
 
 import pandas as pd
 import numpy as np
@@ -11,7 +12,7 @@ from progress.bar import Bar
 from tqdm import tqdm
 import tifffile as tif
 
-from cellpose import models, utils
+from cellpose import models, utils, denoise
 
 from .logger import logger
 
@@ -30,6 +31,16 @@ def _get_channel(color):
         channel =[[CMAP[color[0]], CMAP[color[1]]]]
     return channel
 
+# @click.command()
+def normalize_params():
+    print("Pulling Standard Normalize Parameters...")
+    params = models.normalize_default
+    params['percentile'] = [1., 99.]
+    print("Saving parameters to normalize_default.json")
+    with open('normalize_default.json', "w") as file:
+        json.dump(params, file)
+    
+
 @click.command()
 @click.argument('imgdir')
 @click.argument('outdir')
@@ -42,8 +53,10 @@ def _get_channel(color):
 @click.option('--replace', '-r', is_flag=True, default=False, required=False, help='Replace existing masks')
 @click.option('--count', is_flag=True, default=False, required=False, help='Create csv in mask folder of image cell counts')
 @click.option('--color', default='grey', required=False, help='rgb value of cyto and nucleus ex. rg: red ctyo, green nuc')
+@click.option("--normalize", default=True, required=False, help='Use custom Normalize Features')
+@click.option('--denoise_model', is_flag=True, default=False, required=False, help="Change model to denoise model")
 # @click.option('--do_3d', is_flag=True, default=False, required=False, help='Do 3d segmentation') # DO 3D not working
-def generate_masks(imgdir, outdir, diam, channel, model, no_edge, flow, prob, replace, count, color):  # , do_3d
+def generate_masks(imgdir, outdir, diam, channel, model, no_edge, flow, prob, replace, count, color, normalize, denoise_model):  # , do_3d
     if os.name =='nt':
         os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
     assert os.path.exists(imgdir), "Image Directory doesn't exist"
@@ -59,8 +72,16 @@ def generate_masks(imgdir, outdir, diam, channel, model, no_edge, flow, prob, re
     exten = os.path.join(imgdir, f"*{ channel}.tif")
     exten2 = os.path.join(imgdir, f"*{ channel}.tiff")
     files = glob.glob(exten) + glob.glob(exten2)
-    model = models.CellposeModel(model_type= model, gpu=True)
-    # imgs = [tif.imread(f) for f in files]
+    if denoise_model:
+        model = denoise.CellposeDenoiseModel(model_type=model, gpu=True)
+    else:
+        model = models.CellposeModel(model_type=model, gpu=True)
+        
+    if type(normalize) != str:
+        with open(normalize) as f:
+            normalize = json.load(f)
+    else:
+        normalize=True
     nimg = len(files)
     assert nimg > 0, "no images found"
     
@@ -75,7 +96,14 @@ def generate_masks(imgdir, outdir, diam, channel, model, no_edge, flow, prob, re
         fname = os.path.join( outdir,names[i])
         if not os.path.exists(fname) or  replace:
             img = tif.imread(f)
-            mask, _, _ = model.eval(img, diameter= diam, channels=channels, flow_threshold= flow, cellprob_threshold= prob) # , do_3d=do_3d
+            if denoise_model:
+                mask, _, _, _ = model.eval(img, diameter= diam, 
+                                           channels=channels,  normalize=normalize,
+                                           flow_threshold=flow, cellprob_threshold=prob)
+            else:
+                mask, _, _ = model.eval(img, diameter=diam,
+                                        channels=channels, normalize=normalize,
+                                        flow_threshold=flow, cellprob_threshold=prob)
             if  no_edge:
                 mask = utils.remove_edge_masks(mask)
             tif.imsave(fname, mask.astype('uint16'))

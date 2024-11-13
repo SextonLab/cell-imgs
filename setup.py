@@ -12,7 +12,7 @@ if os.name =='nt':
 
 setup(
     name='cellimgs',
-    version='0.1.1',
+    version='0.2.0',
     description='Set of scripts to use on cell images',
     long_description=readme(),
     classifiers=[
@@ -29,6 +29,7 @@ setup(
     entry_points = {
         'console_scripts' : [
             'gen-masks=cellimgs.gen_masks:generate_masks',
+            'normal-params=cellimgs.gen_masks:normalize_params',
             'convert-c01=cellimgs.convert:convert',
             'max-proj=cellimgs.max_proj:max_project',
             'cmerge=cellimgs.color_merge:merge_channel',
