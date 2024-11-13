@@ -63,10 +63,16 @@ By default diameters are generated per image and masks are generated on all imag
 - `--count` will create a `count.csv` in the outdir containing image name and the cell count of the image
 - `--do_3d` will use 3D segmentation [DEPRECATED]
 - `--color` with `prgb` in order of cyto and nucleus ex. `rg` for red cyto dye and green nuclear dye (note `p` for ignoring other channels e.g. only blue channe `--color pb`)
+- `--normalize` with a path to a normalize parameter json file to load additional normalization features
+- `--denoise_mdoel` if this flag is used, the denoise model will be loaded instead of a standard model
 
 #### Using Customs models 
 
 If you are using a pre-cellpose3 model under the "Custom Model" section of the UI pass the name in parenthesis as model.
+
+#### Normalize Paramters
+
+To generate the standard normalization parameters run the `normal-params` command to get the standard json file for editing
 
 **Example**: "cellpose (cyto2_cp3)" > `cyto2_cp3`
 
