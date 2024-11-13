@@ -31,6 +31,16 @@ def _get_channel(color):
         channel =[[CMAP[color[0]], CMAP[color[1]]]]
     return channel
 
+# @click.command()
+def normalize_params():
+    print("Pulling Standard Normalize Parameters...")
+    params = models.normalize_default
+    params['percentile'] = [1., 99.]
+    print("Saving parameters to normalize_default.json")
+    with open('normalize_default.json', "w") as file:
+        json.dump(params, file)
+    
+
 @click.command()
 @click.argument('imgdir')
 @click.argument('outdir')
@@ -43,7 +53,7 @@ def _get_channel(color):
 @click.option('--replace', '-r', is_flag=True, default=False, required=False, help='Replace existing masks')
 @click.option('--count', is_flag=True, default=False, required=False, help='Create csv in mask folder of image cell counts')
 @click.option('--color', default='grey', required=False, help='rgb value of cyto and nucleus ex. rg: red ctyo, green nuc')
-@click.option("--normalize", default=None, required=False, help='Use custom Normalize Features')
+@click.option("--normalize", default=True, required=False, help='Use custom Normalize Features')
 @click.option('--denoise_model', is_flag=True, default=False, required=False, help="Change model to denoise model")
 # @click.option('--do_3d', is_flag=True, default=False, required=False, help='Do 3d segmentation') # DO 3D not working
 def generate_masks(imgdir, outdir, diam, channel, model, no_edge, flow, prob, replace, count, color, normalize, denoise_model):  # , do_3d
