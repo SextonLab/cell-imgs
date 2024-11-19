@@ -77,7 +77,7 @@ def generate_masks(imgdir, outdir, diam, channel, model, no_edge, flow, prob, re
     else:
         model = models.CellposeModel(model_type=model, gpu=True)
         
-    if type(normalize) != str:
+    if type(normalize) == str:
         with open(normalize) as f:
             normalize = json.load(f)
     else:
