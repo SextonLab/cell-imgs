@@ -57,6 +57,9 @@ def normalize_params():
 @click.option('--denoise_model', is_flag=True, default=False, required=False, help="Change model to denoise model")
 # @click.option('--do_3d', is_flag=True, default=False, required=False, help='Do 3d segmentation') # DO 3D not working
 def generate_masks(imgdir, outdir, diam, channel, model, no_edge, flow, prob, replace, count, color, normalize, denoise_model):  # , do_3d
+    get_masks(imgdir, outdir, diam, channel, model, no_edge, flow, prob, replace, count, color, normalize, denoise_model)
+    
+def get_masks(imgdir, outdir, diam, channel, model, no_edge, flow, prob, replace, count, color, normalize, denoise_model):  # , do_3d
     if os.name =='nt':
         os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
     assert os.path.exists(imgdir), "Image Directory doesn't exist"

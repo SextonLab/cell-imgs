@@ -5,3 +5,5 @@ from .max_proj import max_project
 from .gen_masks import generate_masks
 from .color_merge import merge_channel
 from .tifsmasher import smash_tif
+from .counts import get_well_counts
+from .align_all import align_images
