@@ -205,7 +205,7 @@ def align_images(first_pass_images, second_pass_images, output_1, output_2, chan
 @click.option('--color', default='grey', required=False, help='rgb value of cyto and nucleus ex. rg: red ctyo, green nuc')
 @click.option("--normalize", default=True, required=False, help='Use custom Normalize Features')
 @click.option('--denoise_model', is_flag=True, default=False, required=False, help="Change model to denoise model")
-def align_images(first_pass, second_pass, diam, channel, model, no_edge, flow, prob, color, normalize, denoise_model):
+def align_images_run(first_pass, second_pass, diam, channel, model, no_edge, flow, prob, color, normalize, denoise_model):
     """
     psudo code time
     take the image folder for both passes

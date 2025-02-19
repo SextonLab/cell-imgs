@@ -34,7 +34,7 @@ setup(
             'max-proj=cellimgs.max_proj:max_project',
             'cmerge=cellimgs.color_merge:merge_channel',
             'smashtif=cellimgs.tifsmasher:smash_tif',
-            'align_images=cellimgs.align_all:align_images',
+            'align_images=cellimgs.align_all:align_images_run',
             'get-wellcounts=cellimgs.counts:get_well_counts',
             'masker=gui.main:main',
             ]
