@@ -17,9 +17,9 @@ def get_well_counts(path, scope):
         'count':[]
     }
     df = pd.read_csv(path)
-    if scope == 'CQ1':
+    if scope == 'CQ1'or scope=='CV800':
         df['well_id'] = df['image'].apply(lambda x: x.split('/')[-1].split('F')[0])
-    elif scope == 'CX5' or scope=='CV800':
+    elif scope == 'CX5': 
         df['well_id'] = df['image'].apply(lambda x: x.split('_')[-1].split('f')[0])
     else:
         assert scope in MICROSCOPES, "Scope not supported"
