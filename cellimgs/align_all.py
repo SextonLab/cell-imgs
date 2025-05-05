@@ -23,10 +23,12 @@ BINARY_MASK_SECOND = 'second_pass_binary'
 
 def get_pad_val(current):
     pv = 2
-    if current>0 and current<=0.15:
+    if current>0.0 and current<=0.15:
+        pv = 20
+    elif current>0.15 and current<=0.50:
         pv = 10
-    elif current>15 and current<=0.50:
-        pv = 5
+    elif current>0.5 and current<=0.70:
+        pv = 4
     return pv
 
 def apply_pad(images, outdir,right, left, top, bot):
@@ -38,7 +40,7 @@ def apply_pad(images, outdir,right, left, top, bot):
         img_out = img_out[bot:dim+bot,right:dim+right]
         tif.imwrite(outname, img_out)
 
-def pad_image(img, how, ideal, pad_value=2):
+def pad_image(img, how, ideal, pad_value):
     """
     adds empty pixels of pad_value to the side of how
     """
@@ -100,6 +102,7 @@ def align_images(first_pass_images, second_pass_images, output_1, output_2, chan
         'first_shape':[],
         'second_shape':[]
     }
+        
     for fm, sm in zip(first_pass_images, second_pass_images):
         print(fm, sm)
         # Read images in and convert to binary mask
@@ -110,7 +113,9 @@ def align_images(first_pass_images, second_pass_images, output_1, output_2, chan
 
         # get output filename 
         fname = os.path.basename(fm)
-        if first.shape == second.shape:
+        
+        
+        if (first.shape == second.shape):
             # get the alignment metric
             ideal = first.sum()
             currrent = (first*second).sum()
@@ -136,15 +141,16 @@ def align_images(first_pass_images, second_pass_images, output_1, output_2, chan
                 #     break
 
                 # iterate over the routes thru the image
+                pv = get_pad_val(current=percent_diff)
                 for how in ROUTE:
-                    pv = get_pad_val(current=currrent)
+                    # pv = get_pad_val(current=currrent)
                     if how == 'left':
                         temp = pad_image(second, how, first, pad_value=pv)
                         new_percent = (first*temp).sum()
                         if new_percent>currrent:
                             second = temp # change the shape
                             percent_diff = new_percent/ideal
-                            left_cor+=2
+                            left_cor+=pv
                             currrent = new_percent
                     elif how == 'right':
                         temp = pad_image(second, how, first, pad_value=pv)
@@ -152,7 +158,7 @@ def align_images(first_pass_images, second_pass_images, output_1, output_2, chan
                         if new_percent>currrent:
                             second = temp # change the shape
                             percent_diff = new_percent/ideal
-                            right_cor+=2
+                            right_cor+=pv
                             currrent = new_percent
                     elif how == 'up':
                         temp = pad_image(second, how, first, pad_value=pv)
@@ -160,7 +166,7 @@ def align_images(first_pass_images, second_pass_images, output_1, output_2, chan
                         if new_percent>currrent:
                             second = temp # change the shape
                             percent_diff = new_percent/ideal
-                            top_cor+=2
+                            top_cor+=pv
                             currrent = new_percent
                     elif how == 'down':
                         temp = pad_image(second, how, first, pad_value=pv)
@@ -168,12 +174,13 @@ def align_images(first_pass_images, second_pass_images, output_1, output_2, chan
                         if new_percent>currrent:
                             second = temp # change the shape
                             percent_diff = new_percent/ideal
-                            bot_cor+=2
+                            bot_cor+=pv
                             currrent = new_percent
                 if past == currrent:
                     past_count+=1
                 else:
                     past = currrent
+                    past_count=0
                 iters+=1
             print("Completed with ", iters, f" with {(percent_diff*100):.3f}%")
             corrections['ending alignment'].append(percent_diff)
@@ -205,7 +212,7 @@ def align_images(first_pass_images, second_pass_images, output_1, output_2, chan
 @click.option('--color', default='grey', required=False, help='rgb value of cyto and nucleus ex. rg: red ctyo, green nuc')
 @click.option("--normalize", default=True, required=False, help='Use custom Normalize Features')
 @click.option('--denoise_model', is_flag=True, default=False, required=False, help="Change model to denoise model")
-def align_images_run(first_pass, second_pass, diam, channel, model, no_edge, flow, prob, color, normalize, denoise_model):
+def run(first_pass, second_pass, diam, channel, model, no_edge, flow, prob, color, normalize, denoise_model):
     """
     psudo code time
     take the image folder for both passes
@@ -264,7 +271,16 @@ def align_images_run(first_pass, second_pass, diam, channel, model, no_edge, flo
     
     first_images = glob.glob(os.path.join(first_masks, f"*{channel}.tif")) # +glob.glob(os.path.join(first_masks, f"*{channel}.tiff"))
     second_images = glob.glob(os.path.join(second_masks, f"*{channel}.tif"))  # +glob.glob(os.path.join(second_masks, f"*{channel}.tiff"))
-    correction_results = align_images(first_pass_images=first_images, second_pass_images=second_images, output_1=first_output, output_2=second_output, channel=channel)
+    
+    imgs_1 = [os.path.basename(f) for f in first_images]
+    imgs_2 = [os.path.basename(f) for f in second_images]
+    img_list = list(set(imgs_1) & set(imgs_2))
+    
+    first_pass_images = [os.path.join(first_masks, f) for f in img_list]
+    second_pass_images = [os.path.join(second_masks, f) for f in img_list]
+    
+    correction_results = align_images(first_pass_images=first_pass_images, second_pass_images=second_pass_images, 
+                                      output_1=first_output, output_2=second_output, channel=channel)
     correction_results.to_csv(os.path.join(second_output, "corrrections_results.csv"), index=False)
     
     print("Applying Alignment...")
