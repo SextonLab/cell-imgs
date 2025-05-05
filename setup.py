@@ -12,7 +12,7 @@ if os.name =='nt':
 
 setup(
     name='cellimgs',
-    version='0.2.1',
+    version='0.2.5',
     description='Set of scripts to use on cell images',
     long_description=readme(),
     classifiers=[
@@ -34,7 +34,7 @@ setup(
             'max-proj=cellimgs.max_proj:max_project',
             'cmerge=cellimgs.color_merge:merge_channel',
             'smashtif=cellimgs.tifsmasher:smash_tif',
-            'align_images=cellimgs.align_all:align_images_run',
+            'align_images=cellimgs.align_all:run',
             'get-wellcounts=cellimgs.counts:get_well_counts',
             'masker=gui.main:main',
             ]
