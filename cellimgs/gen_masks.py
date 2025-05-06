@@ -109,7 +109,7 @@ def get_masks(imgdir, outdir, diam, channel, model, no_edge, flow, prob, replace
                                         flow_threshold=flow, cellprob_threshold=prob)
             if  no_edge:
                 mask = utils.remove_edge_masks(mask)
-            tif.imsave(fname, mask.astype('uint16'))
+            tif.imwrite(fname, mask.astype('uint16'))
             if  count:
                 cell_count['image'].append(f)
                 cell_count['count'].append(len(utils.outlines_list(mask)))

@@ -41,4 +41,4 @@ def max_project(indir, outdir, channel):
         a, b,c = img.shape
         out = np.max(img, axis=_get_axis(a,b,c))
         fname = os.path.join(outdir, fn)
-        tif.imsave(fname, data=out)
+        tif.imwrite(fname, data=out)

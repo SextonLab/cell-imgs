@@ -144,7 +144,7 @@ def merge_channels(files, on_field, scope, outdir=None):
         img = np.ones((len(fields[k]), 2160, 2560)) # assumes shape of (c, 2160, 2560)
         for i,j in enumerate(fields[k]):
             img[i] = tifffile.imread(j)
-        tifffile.imsave(filename, img)
+        tifffile.imwrite(filename, img)
     
 def split_wellid(well):
     """
@@ -230,7 +230,7 @@ def smash_tif(files, filename, bar):
     for i,j in enumerate(files):
         img[i] = tifffile.imread(j)
         bar.value = float(i/len(files)*100)
-    tifffile.imsave(filename, img )
+    tifffile.imwrite(filename, img )
 
 def smash(files, filename):
     """
@@ -245,4 +245,4 @@ def smash(files, filename):
     img = np.ones((len(files), a,b))
     for i, j in enumerate(files):
         img[i] =  tifffile.imread(j)
-    tifffile.imsave(filename, img)
+    tifffile.imwrite(filename, img)

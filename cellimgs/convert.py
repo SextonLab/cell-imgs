@@ -39,7 +39,7 @@ def convert(indir, outdir, channel):
         filename = os.path.join(outdir, fname)
         data = bioformats.ImageReader(f).read()
         # data = data.astype('float16')
-        tif.imsave(filename, data=data)
+        tif.imwrite(filename, data=data)
         bar.next()
     bar.finish()
     javabridge.kill_vm()
