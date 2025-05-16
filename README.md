@@ -114,6 +114,17 @@ Groups single tifs into a tif stacks for 3D segmentation and analysis
 - `--on_loc` Changes from Z stack to location 
 
 
+### Align Images
+
+`align_images /first/pass/dir /second/pass/dir`
+
+
+Aligns two past images sets together after generating masks for them
+
+#### Options
+
+Same options as `gen-masks` for mask generation
+
 ## GUI Generate Masks
 
 TODO: Add instructions and pictures for this bad boy

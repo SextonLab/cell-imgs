@@ -12,7 +12,7 @@ if os.name =='nt':
 
 setup(
     name='cellimgs',
-    version='0.2.5',
+    version='0.3.0',
     description='Set of scripts to use on cell images',
     long_description=readme(),
     classifiers=[
