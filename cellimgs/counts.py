@@ -1,4 +1,5 @@
 import os
+import re
 import pandas as pd
 from cellpose import utils
 import glob
@@ -7,6 +8,22 @@ import click
 from tqdm import tqdm
 
 MICROSCOPES = ['CQ1', 'CX5', 'CV8000']
+
+@click.command()
+@click.argument('path')
+@click.option('--chanel', '-c', default='*', help='Mask channel')
+def get_image_counts(path, channel):
+    files = glob.glob(os.path.join(path, f"*{channel}.tif")) + glob.glob(os.path.join(path, f"*{channel}.tiff"))
+    data = {
+        'image':[],
+        'count':[],
+    }
+    for f in tqdm(files):
+        img = tif.imread(f)
+        data['image'].append(f)
+        data['count'].append(len(utils.outlines_list(img)))
+    df = pd.DataFrame(data=data)
+    df.to_csv(os.path.join(path, 'counts.csv'), index=False)
 
 @click.command()
 @click.argument('path')
