@@ -1,4 +1,5 @@
-cellpose
+cellpose==3.1.1.2
+cellpose[gui]==3.1.1.2
 click
 # javabridge 
 # importlib_metadata
