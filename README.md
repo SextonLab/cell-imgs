@@ -55,7 +55,7 @@ By default diameters are generated per image and masks are generated on all imag
 
 - `--diam` or `-d` followed by a number to set to a fixed cell diameter
 - `--channel` or `-c` followed by the channel idenifier, e.g. "d0", "C01"
-- `--model` or `-m` followed by the model name from the model zoo default is "cyto"
+- `--model` or `-m` followed by a pretrained model from the GUI or absoulte path to a pretrained cellpose-SAM model, default `cpsam`
 - `--no_edge` or `-n` using this flag will add the step to remove masks around the edge of the image 
 - `--flow` or `-f` followed by flow threshold, default 0.4
 - `--prob` or `-p` followed by cell probablity threshold, default 0.0
