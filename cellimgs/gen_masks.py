@@ -46,7 +46,7 @@ def normalize_params():
 @click.argument('outdir')
 @click.option('--diam','-d', default=0.0, help='Cell diameter')
 @click.option('--channel','-c', default='*', required=False, help='Channels to segement')
-@click.option('--model', '-m',default='cyto3', required=False, help='Model')
+@click.option('--model', '-m',default='cpsam', required=False, help='Pretrained model name (e.g. cpsam) or path to pretrained model')
 @click.option('--no_edge', '-n', is_flag=True, default=False, required=False, help="Extra step to remove cells on the edge of masks")
 @click.option('--flow', '-f', default=0.4, required=False, help='Flow threshold')
 @click.option('--prob', '-p', default=0.0, required=False, help='Cell probability')
@@ -75,10 +75,13 @@ def get_masks(imgdir, outdir, diam, channel, model, no_edge, flow, prob, replace
     exten = os.path.join(imgdir, f"*{ channel}.tif")
     exten2 = os.path.join(imgdir, f"*{ channel}.tiff")
     files = glob.glob(exten) + glob.glob(exten2)
+    if model is not 'cpsam' and not os.path.exists(model):
+       print(f"Model {model} could not be found. Using CellposeSAM")
+       model = 'cpsam' 
     if denoise_model:
-        model = denoise.CellposeDenoiseModel(model_type=model, gpu=True)
+        model = denoise.CellposeDenoiseModel(pretrained_model=model, gpu=True)
     else:
-        model = models.CellposeModel(model_type=model, gpu=True)
+        model = models.CellposeModel(pretrained_model=model, gpu=True)
         
     if type(normalize) == str:
         with open(normalize) as f:
