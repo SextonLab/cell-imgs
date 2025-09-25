@@ -55,11 +55,12 @@ def normalize_params():
 @click.option('--color', default='grey', required=False, help='rgb value of cyto and nucleus ex. rg: red ctyo, green nuc')
 @click.option("--normalize", default=True, required=False, help='Use custom Normalize Features')
 @click.option('--denoise_model', is_flag=True, default=False, required=False, help="Change model to denoise model")
+@click.option('--batch','-b', default=8, required=False, help="Cellpose Batch size")
 # @click.option('--do_3d', is_flag=True, default=False, required=False, help='Do 3d segmentation') # DO 3D not working
-def generate_masks(imgdir, outdir, diam, channel, model, no_edge, flow, prob, replace, count, color, normalize, denoise_model):  # , do_3d
-    get_masks(imgdir, outdir, diam, channel, model, no_edge, flow, prob, replace, count, color, normalize, denoise_model)
+def generate_masks(imgdir, outdir, diam, channel, model, no_edge, flow, prob, replace, count, color, normalize, denoise_model, batch):  # , do_3d
+    get_masks(imgdir, outdir, diam, channel, model, no_edge, flow, prob, replace, count, color, normalize, denoise_model, batch)
     
-def get_masks(imgdir, outdir, diam, channel, model, no_edge, flow, prob, replace, count, color, normalize, denoise_model):  # , do_3d
+def get_masks(imgdir, outdir, diam, channel, model, no_edge, flow, prob, replace, count, color, normalize, denoise_model, batch):  # , do_3d
     if os.name =='nt':
         os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
     assert os.path.exists(imgdir), "Image Directory doesn't exist"
@@ -102,11 +103,11 @@ def get_masks(imgdir, outdir, diam, channel, model, no_edge, flow, prob, replace
             if denoise_model:
                 mask, _, _, _ = model.eval(img, diameter= diam, 
                                            channels=channels,  normalize=normalize,
-                                           flow_threshold=flow, cellprob_threshold=prob)
+                                           flow_threshold=flow, cellprob_threshold=prob, batch_size=batch)
             else:
                 mask, _, _ = model.eval(img, diameter=diam,
                                         channels=channels, normalize=normalize,
-                                        flow_threshold=flow, cellprob_threshold=prob)
+                                        flow_threshold=flow, cellprob_threshold=prob, batch_size=batch)
             if  no_edge:
                 mask = utils.remove_edge_masks(mask)
             tif.imwrite(fname, mask.astype('uint16'))
