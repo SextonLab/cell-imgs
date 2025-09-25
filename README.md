@@ -7,7 +7,7 @@ Group of python scripts and jupyter notebooks to convert C01 images to tifs, sta
 ### Requirements
 
 - Java 18 JDK https://www.oracle.com/java/technologies/downloads/
-- Cuda and Cellpose [Follow the Cellpose install instructions](https://gitlab.umich.edu/sextonlab/documents/-/blob/master/environment/cellpose.md)
+- Cuda and Cellpose [Follow the Cellpose install instructions](https://pypi.org/project/cellpose/)
 - C++ build tools, use relevant OS install instructions for more
 
 ### PIP install
@@ -61,7 +61,7 @@ By default diameters are generated per image and masks are generated on all imag
 - `--prob` or `-p` followed by cell probablity threshold, default 0.0
 - `--replace` or `-r` will replace all existing masks in the outdir instead of skipping them
 - `--count` will create a `count.csv` in the outdir containing image name and the cell count of the image
-- `--do_3d` will use 3D segmentation [DEPRECATED]
+- ~~`--do_3d` will use 3D segmentation~~ [DEPRECATED] 
 - `--color` with `prgb` in order of cyto and nucleus ex. `rg` for red cyto dye and green nuclear dye (note `p` for ignoring other channels e.g. only blue channe `--color pb`)
 - `--normalize` with a path to a normalize parameter json file to load additional normalization features
 - `--denoise_mdoel` if this flag is used, the denoise model will be loaded instead of a standard model
