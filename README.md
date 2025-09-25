@@ -65,6 +65,7 @@ By default diameters are generated per image and masks are generated on all imag
 - `--color` with `prgb` in order of cyto and nucleus ex. `rg` for red cyto dye and green nuclear dye (note `p` for ignoring other channels e.g. only blue channe `--color pb`)
 - `--normalize` with a path to a normalize parameter json file to load additional normalization features
 - `--denoise_mdoel` if this flag is used, the denoise model will be loaded instead of a standard model
+- `--batch` followed by a number to change the cellpose batch size, default 8
 
 #### Using Customs models 
 
