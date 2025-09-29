@@ -12,13 +12,13 @@ if os.name =='nt':
 
 setup(
     name='cellimgs',
-    version='0.3.2',
+    version='0.4.0',
     description='Set of scripts to use on cell images',
     long_description=readme(),
     classifiers=[
         'Development Status :: Number - Alpha',
         'License :: OSI Approved :: MIT License',
-        'Programming Language :: Python :: 3.8'
+        'Programming Language :: Python :: 3.12'
     ],
     keywords='microscopy cellpose tif C01',
     url='https://github.com/SextonLab/cell-imgs',
@@ -38,6 +38,7 @@ setup(
             'get-wellcounts=cellimgs.counts:get_well_counts',
             'get-imgcounts=cellimgs.counts:get_image_counts',
             'masker=gui.main:main',
+            'stacktif=cellimgs.tifsmasher:smash_tif',
             ]
     },
     # install_requries=[

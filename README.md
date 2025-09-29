@@ -107,7 +107,20 @@ Merges single channel tifs `indir` into multichannel RGB tifs `outdir` where `re
 
 `smashtif indir outidr`
 
-Groups single tifs into a tif stacks for 3D segmentation and analysis
+Groups single tifs into a tif stacks then converts the stack into a MIP
+
+#### Options
+
+- `--scope`, `-s` Change scope metadata [CV800, CQ1]
+- `--channel`, `-c` Specific image channel to smash, defaults to all channels
+- `--on_loc`, `-l` Changes from Z stack to location 
+- `--bulk`, `-b` Set if there are field sub directories
+
+### Tif Stacker
+
+`stacktif indir outdir`
+
+Groups single tifs into a 3D tif for 3D segementation and analysis
 
 #### Options
 
