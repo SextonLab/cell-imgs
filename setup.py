@@ -33,7 +33,7 @@ setup(
             'convert-c01=cellimgs.convert:convert',
             'max-proj=cellimgs.max_proj:max_project',
             'cmerge=cellimgs.color_merge:merge_channel',
-            'smashtif=cellimgs.tifsmasher:smash_tif',
+            'smashtif=cellimgs.full_smash:s_n_s',
             'align_images=cellimgs.align_all:run',
             'get-wellcounts=cellimgs.counts:get_well_counts',
             'get-imgcounts=cellimgs.counts:get_image_counts',

@@ -7,3 +7,4 @@ from .color_merge import merge_channel
 from .tifsmasher import smash_tif
 from .counts import get_well_counts
 from .align_all import align_images
+from .full_smash import s_n_s

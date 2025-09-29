@@ -165,9 +165,10 @@ def make_table(files, scope='CV8000'):
     """
     if scope =='CV8000':
         reg = r'.*[\/|\\]*(?P<plate_id>.*)_(?P<well_id>.*)_T(?P<timepoint>[0-9]{4})F(?P<field_id>[0-9]{3})L(?P<location>[0-9]+)A[0-9]{2}Z(?P<zstack>[0-9]+)C(?P<channel>[0-9]{2})\.tif'
-    else:
+    elif scope == 'CQ1':
         reg = r'[\/|\\]*(?P<plate_id>\w+)[\/|\\](?P<well_id>W\d{4})F(?P<field_id>\d{4})T(?P<timepoint>\d{4})Z(?P<zstack>\d{3})C(?P<channel>\d)'
-    
+    elif scope == 'STICH':
+        reg = r'(?P<well_id>.*)_(?P<field_id>F\d{4})_(?P<timepoint>T\d{4})_(?P<zstack>Z\d{4})_(?P<channel>C\d{2})'
     data = {
         'path':[],
         'plate_id':[],
@@ -181,7 +182,7 @@ def make_table(files, scope='CV8000'):
         'channel':[]
     }
     for f in files:
-        row = re.search(reg, f)
+        row = re.search(reg, os.path.basename(f))
         if row is not None:
             meta = row.groupdict()
             data['path'].append(f)
@@ -193,10 +194,11 @@ def make_table(files, scope='CV8000'):
             for k in meta.keys():
                 data[k].append(meta[k])
     
-    # if location is not used set all values to zero
+    # Add default value to missing parameters
     if len(data['location'])==0:
         data['location'] = [0 for x in range(len(data['path']))]
-    
+    if len(data['plate_id'])==0:
+        data['plate_id'] = ['plate' for x in range(len(data['path']))]
     return pd.DataFrame(data=data)
 
 
