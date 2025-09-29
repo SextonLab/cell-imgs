@@ -11,7 +11,7 @@ from progress.bar import Bar
 
 import tifffile as tif
 
-from logger import logger
+from .logger import logger
 
 def _get_axis(a,b,c):
     if a<b and a<c:

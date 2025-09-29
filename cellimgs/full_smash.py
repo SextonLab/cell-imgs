@@ -5,8 +5,8 @@ from email.policy import default
 from glob import glob
 
 # from .logger import logger
-from merger import make_table, sort_df, smash
-from max_proj import _get_axis
+from .merger import make_table, sort_df, smash
+from .max_proj import _get_axis
 
 import click
 from tqdm import tqdm
