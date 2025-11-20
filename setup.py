@@ -12,7 +12,7 @@ if os.name =='nt':
 
 setup(
     name='cellimgs',
-    version='0.4.0',
+    version='0.4.2',
     description='Set of scripts to use on cell images',
     long_description=readme(),
     classifiers=[
@@ -38,7 +38,7 @@ setup(
             'get-wellcounts=cellimgs.counts:get_well_counts',
             'get-imgcounts=cellimgs.counts:get_image_counts',
             'masker=gui.main:main',
-            'stacktif=cellimgs.tifsmasher:smash_tif',
+            'stack-imgs=cellimgs.stacker:stack_tif',
             ]
     },
     # install_requries=[

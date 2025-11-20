@@ -118,14 +118,15 @@ Groups single tifs into a tif stacks then converts the stack into a MIP
 
 ### Tif Stacker
 
-`stacktif indir outdir`
+`stack-imgs src dest`
 
 Groups single tifs into a 3D tif for 3D segementation and analysis
 
 #### Options
 
 - `--scope`, `-s` Change scope metadata [CV800, CQ1]
-- `--on_loc` Changes from Z stack to location 
+- `--on` , `-o` Changes which feature is used to to stack, default: `z` (options `z`:ZStack,`t`:timepoint, `l`:location) 
+- `--bulk`, `-b` If used the script will look one directory deeper for images
 
 
 ### Align Images
