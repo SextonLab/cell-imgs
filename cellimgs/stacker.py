@@ -15,7 +15,7 @@ SCOPES = ['CV8000', 'CQ1']
 ON = ['z', 't', 'l']
 REG = {
     'CV8000':r".*_([A-Z]\d{2})_(T[0-9]{4})(F\d{3})(L\d{2})(A\d{2})(Z\d{2})(C\d{2})",
-    'CQ1':r".*_([A-Z]\d{2})_(T[0-9]{4})(F\d{3})(L\d{2})(A\d{2})(Z\d{2})(C\d{2})"
+    'CQ1':r"(W\d{4})(F\d{4})(T\d{4})(Z\d{3})(C\d)"
 }
 TARGET = {
     'z':'zstack',
@@ -57,19 +57,19 @@ def make_df(files, scope):
             'wellID':[],
             'timepoint':[],
             'fieldID':[],
-            'loc':[],
-            'acq':[],
+            # 'loc':[],
+            # 'acq':[],
             'zstack':[],
             'channel':[],
             'fname':[]
         } 
         for f in files:
-            _, well, timepoint, field, loc, acq, zstack, chan, _ = re.split(reg, os.path.basename(f))
+            _, well, field, timepoint, zstack, chan, _ = re.split(reg, os.path.basename(f))
             data['wellID'].append(well)
             data['timepoint'].append(timepoint)
             data['fieldID'].append(field)
-            data['loc'].append(loc)
-            data['acq'].append(acq)
+            # data['loc'].append(loc)
+            # data['acq'].append(acq)
             data['zstack'].append(zstack)
             data['channel'].append(chan)
             data['fname'].append(f)
