@@ -92,7 +92,7 @@ def get_masks(imgdir, outdir, diam, channel, model, no_edge, flow, prob, replace
     nimg = len(files)
     assert nimg > 0, "no images found"
     
-    channels = _get_channel(color= color) # black and white images
+    # channels = _get_channel(color= color) # black and white images
     if  diam <= 0:
          diam = None
     
@@ -105,11 +105,13 @@ def get_masks(imgdir, outdir, diam, channel, model, no_edge, flow, prob, replace
             img = tif.imread(f)
             if denoise_model:
                 mask, _, _, _ = model.eval(img, diameter= diam, 
-                                           channels=channels,  normalize=normalize,
+                                           # channels=channels,  
+                                           normalize=normalize,
                                            flow_threshold=flow, cellprob_threshold=prob, batch_size=batch)
             else:
                 mask, _, _ = model.eval(img, diameter=diam,
-                                        channels=channels, normalize=normalize,
+                                        # channels=channels, 
+                                        normalize=normalize,
                                         flow_threshold=flow, cellprob_threshold=prob, batch_size=batch)
             if  no_edge:
                 mask = utils.remove_edge_masks(mask)
