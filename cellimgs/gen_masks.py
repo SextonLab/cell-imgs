@@ -57,10 +57,11 @@ def normalize_params():
 @click.option('--denoise_model', is_flag=True, default=False, required=False, help="Change model to denoise model")
 @click.option('--batch','-b', default=8, required=False, help="Cellpose Batch size")
 # @click.option('--do_3d', is_flag=True, default=False, required=False, help='Do 3d segmentation') # DO 3D not working
+@click.option("--niter", default=None, required=False, help='Number of iterations')
 def generate_masks(imgdir, outdir, diam, channel, model, no_edge, flow, prob, replace, count, color, normalize, denoise_model, batch):  # , do_3d
     get_masks(imgdir, outdir, diam, channel, model, no_edge, flow, prob, replace, count, color, normalize, denoise_model, batch)
     
-def get_masks(imgdir, outdir, diam, channel, model, no_edge, flow, prob, replace, count, color, normalize, denoise_model, batch):  # , do_3d
+def get_masks(imgdir, outdir, diam, channel, model, no_edge, flow, prob, replace, count, color, normalize, denoise_model, batch, niter):  # , do_3d
     if os.name =='nt':
         os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
     assert os.path.exists(imgdir), "Image Directory doesn't exist"
@@ -107,12 +108,14 @@ def get_masks(imgdir, outdir, diam, channel, model, no_edge, flow, prob, replace
                 mask, _, _, _ = model.eval(img, diameter= diam, 
                                            # channels=channels,  
                                            normalize=normalize,
-                                           flow_threshold=flow, cellprob_threshold=prob, batch_size=batch)
+                                           flow_threshold=flow, cellprob_threshold=prob, batch_size=batch,
+                                           niter=niter)
             else:
                 mask, _, _ = model.eval(img, diameter=diam,
                                         # channels=channels, 
                                         normalize=normalize,
-                                        flow_threshold=flow, cellprob_threshold=prob, batch_size=batch)
+                                        flow_threshold=flow, cellprob_threshold=prob, batch_size=batch,
+                                        niter=niter)
             if  no_edge:
                 mask = utils.remove_edge_masks(mask)
             tif.imwrite(fname, mask.astype('uint16'))
