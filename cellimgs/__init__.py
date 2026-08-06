@@ -1,11 +1,16 @@
-# from .scripts import generate_masks
-from .logger import logger
-from .convert import convert
-from .max_proj import max_project
-from .gen_masks import generate_masks
-from .color_merge import merge_channel
-from .tifsmasher import smash_tif
-from .counts import get_well_counts
-from .align_all import align_images
-from .full_smash import s_n_s
-from .stacker import stack_tif
+"""Command line tools for high-content microscopy image processing.
+
+Nothing heavy is imported here on purpose. The previous version eagerly
+imported every submodule, so a single missing optional dependency (cellpose,
+or the long-gone ``progress`` package) broke all eleven console scripts at
+once. Import the submodule you need, or use the installed commands.
+"""
+
+__version__ = "1.0.0"
+
+__all__ = [
+    "c01",
+    "imgio",
+    "logger",
+    "metadata",
+]

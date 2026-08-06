@@ -1,125 +1,73 @@
-from email.policy import default
-import os
-import re # REEEEEE
-from glob import glob
+"""Group single-plane TIFs into 3D stacks for volumetric analysis."""
 
-from .merger import make_table, sort_df, smash
-from .logger import logger
+import os
+
 import click
 from tqdm import tqdm
-import tifffile as tif
-import numpy as np
-import pandas as pd
 
-SCOPES = ['CV8000', 'CQ1']
-ON = ['z', 't', 'l']
-REG = {
-    'CV8000':r".*_([A-Z]\d{2})_(T[0-9]{4})(F\d{3})(L\d{2})(A\d{2})(Z\d{2})(C\d{2})",
-    'CQ1':r"(W\d{4})(F\d{4})(T\d{4})(Z\d{3})(C\d)"
-}
-TARGET = {
-    'z':'zstack',
-    't':'timepoint',
-    'l':'loc'
-}
+from .imgio import ensure_dir, find_images, read_stack, write_stack
+from .logger import logger
+from .metadata import SCOPES, build_table, iter_groups, normalize_scope, stack_files, stack_name
 
-def sort(df, well, channel, field, on='z'):
-    if on == 't': # timepoint
-        return df.loc[(df['well_id']==well) & (df['channel']==channel) & (df['field_id']==field), 'path'].tolist()
-        
+ON_CHOICES = {"z": "zstack", "t": "timepoint", "l": "location"}
 
-def make_df(files, scope):
-    reg = REG[scope]
-    if scope == 'CV8000':
-        data = {
-            'wellID':[],
-            'timepoint':[],
-            'fieldID':[],
-            'loc':[],
-            'acq':[],
-            'zstack':[],
-            'channel':[],
-            'fname':[]
-        }
-        for f in files:
-            _, well, timepoint, field, loc, acq, zstack, chan, _ = re.split(reg, os.path.basename(f))
-            data['wellID'].append(well)
-            data['timepoint'].append(timepoint)
-            data['fieldID'].append(field)
-            data['loc'].append(loc)
-            data['acq'].append(acq)
-            data['zstack'].append(zstack)
-            data['channel'].append(chan)
-            data['fname'].append(f)
 
-    elif scope == 'CQ1':
-        data = {
-            'wellID':[],
-            'timepoint':[],
-            'fieldID':[],
-            # 'loc':[],
-            # 'acq':[],
-            'zstack':[],
-            'channel':[],
-            'fname':[]
-        } 
-        for f in files:
-            _, well, field, timepoint, zstack, chan, _ = re.split(reg, os.path.basename(f))
-            data['wellID'].append(well)
-            data['timepoint'].append(timepoint)
-            data['fieldID'].append(field)
-            # data['loc'].append(loc)
-            # data['acq'].append(acq)
-            data['zstack'].append(zstack)
-            data['channel'].append(chan)
-            data['fname'].append(f)
+def stack_directory(src, dest, scope="CV8000", on="z", channel="*", bulk=False, replace=False):
+    """Build one 3D TIF per (well, field, channel) group found in ``src``."""
+    if os.name == "nt":
+        os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
-    else:
-        print("You broke something")
-        data = {}
+    scope = normalize_scope(scope)
+    if on not in ON_CHOICES:
+        raise click.BadParameter(
+            f"--on must be one of {list(ON_CHOICES)}", param_hint="--on"
+        )
 
-    return pd.DataFrame(data=data)
+    # The non-bulk glob used to be hardcoded to 'PECCU*.tif', a plate prefix
+    # from one experiment, so every other plate silently matched nothing.
+    files = find_images(src, channel=channel, bulk=bulk)
+    if not files:
+        raise click.ClickException(f"No .tif/.tiff images found in {src}")
 
-def order_files(df, wid, fid, chan, on='z'):
-    return df.loc[(df['wellID']==wid)&(df['fieldID']==fid)&(df['channel']==chan)].sort_values(TARGET[on])['fname'].tolist()
+    ensure_dir(dest)
+    df = build_table(files, scope)
+    if df.empty:
+        raise click.ClickException(
+            f"None of the {len(files)} file(s) in {src} matched the {scope} naming pattern"
+        )
 
-def stack_imgs(files, wid, fid, chan, dest):
-    a, b = tif.imread(files[0]).shape
-    img = np.zeros((len(files), a,b))
-    for i, f in enumerate(files):
-        img[i, :, :] += tif.imread(f)
-    fname = os.path.join(dest, f"{wid}_{fid}_{chan}.tif")
-    tif.imwrite(fname, img)
-    
+    logger(
+        dest,
+        {"src": src, "dest": dest, "scope": scope, "on": on, "channel": channel,
+         "bulk": bulk, "files": len(files), "parsed": len(df)},
+        command="stack-imgs",
+    )
+
+    groups = list(iter_groups(df))
+    written = 0
+    for well, field, chan in tqdm(groups, desc="Stacking"):
+        target = os.path.join(dest, stack_name(well, field, chan))
+        if os.path.exists(target) and not replace:
+            continue
+
+        paths = stack_files(df, well, field, chan, on=on)
+        if not paths:
+            continue
+        write_stack(target, read_stack(paths))
+        written += 1
+
+    print(f"Wrote {written} stack(s) from {len(groups)} group(s) into {dest}")
+    return written
+
+
 @click.command()
-@click.argument('src')
-@click.argument('dest')
-@click.option('--scope', '-s', required=False, default='CV8000', help=f'Which scope options:{SCOPES}')
-@click.option('--on', '-o', required=False, default='z', help=f"Which part of the image name to stack on: {ON}")
-@click.option('--bulk', '-b',  default=False, help='Find sub directories')
-def stack_tif(src, dest, scope, on, bulk):
-    if os.name == 'nt':
-        os.environ['KMP_DUPLICATE_LIB_OK']="TRUE"
-    assert os.path.exists(src), "Source Directory doesn't exist"
-    if not os.path.exists(dest):
-        print(f"Creating destination directory: {dest}")
-        os.mkdir(dest)
-    assert scope in SCOPES, "Unknown Scope"
-
-    if bulk:
-        files = glob(os.path.join(src, '*', '*.tif')) + glob(os.path.join(src, '*', '*.tiff'))
-    else:
-        files = glob(os.path.join(src,  'PECCU*.tif')) + glob(os.path.join(src, '*.tiff'))     
-    
-    logger(dest, locals())
-    
-    df = make_df(files=files, scope=scope)
-    for wid in tqdm(df['wellID'].unique()):
-        for fid in df['fieldID'].unique():
-            for chan in df['channel'].unique():
-                too_stack = order_files(df, wid, fid, chan, on=on)
-                stack_imgs(too_stack, wid, fid, chan, dest)
-                
-
-# if __name__ == '__main__':
-#     stack_tif()
+@click.argument("src")
+@click.argument("dest")
+@click.option("--scope", "-s", default="CV8000", help=f"Microscope naming convention {list(SCOPES)}")
+@click.option("--on", "-o", default="z", help=f"Axis to stack along {list(ON_CHOICES)}")
+@click.option("--channel", "-c", default="*", help="Filename fragment selecting a channel")
+@click.option("--bulk", "-b", is_flag=True, default=False, help="Look one directory deeper for images")
+@click.option("--replace", "-r", is_flag=True, default=False, help="Overwrite existing stacks")
+def stack_tif(src, dest, scope, on, channel, bulk, replace):
+    """Group the single-plane TIFs in SRC into 3D stacks in DEST."""
+    stack_directory(src, dest, scope=scope, on=on, channel=channel, bulk=bulk, replace=replace)

@@ -1,0 +1,70 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cellimgs"
+version = "1.0.0"
+description = "Command line tools for high-content microscopy image processing and Cellpose segmentation"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+keywords = ["microscopy", "cellpose", "cellprofiler", "tif", "C01", "high-content"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Image Processing",
+]
+
+# Real dependencies, declared for the first time. setup.py had them commented
+# out behind a typo ("install_requries"), so `pip install .` installed nothing.
+dependencies = [
+    "cellpose>=4.0",
+    "click>=8.1",
+    "numpy>=1.26",
+    "pandas>=2.0",
+    "tifffile>=2024.1.30",
+    "tqdm>=4.65",
+]
+
+[[project.authors]]
+name = "Sexton Lab"
+
+[project.urls]
+Homepage = "https://github.com/SextonLab/cell-imgs"
+
+[project.optional-dependencies]
+# Readers for vendor formats other than .C01, which is handled natively.
+formats = ["bioio>=1.0"]
+dev = ["pytest>=8.0", "ruff>=0.6"]
+
+[project.scripts]
+gen-masks = "cellimgs.gen_masks:generate_masks"
+normal-params = "cellimgs.gen_masks:normalize_params"
+convert-c01 = "cellimgs.convert:convert"
+max-proj = "cellimgs.max_proj:max_project"
+cmerge = "cellimgs.color_merge:merge_channel"
+smashtif = "cellimgs.full_smash:s_n_s"
+stack-imgs = "cellimgs.stacker:stack_tif"
+align-images = "cellimgs.align_all:run"
+align_images = "cellimgs.align_all:run"   # legacy name, kept so old scripts work
+get-wellcounts = "cellimgs.counts:get_well_counts"
+get-imgcounts = "cellimgs.counts:get_image_counts"
+
+[tool.setuptools]
+packages = ["cellimgs"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+# Click option decorators are one long line each by nature.
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]

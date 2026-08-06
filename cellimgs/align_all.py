@@ -1,305 +1,250 @@
-from email.policy import default
+"""Align a second imaging pass to a first pass using their Cellpose masks.
+
+Both passes are segmented, the masks are binarised, and the second pass is
+translated a few pixels at a time until its overlap with the first pass stops
+improving. The resulting per-image offsets are then applied to the raw
+second-pass images.
+"""
+
 import os
-import re
-import glob
-import argparse
-import json
 
-import pandas as pd
+import click
 import numpy as np
-
-from progress.bar import Bar
-from tqdm import tqdm
+import pandas as pd
 import tifffile as tif
+from tqdm import tqdm
 
 from .gen_masks import get_masks
-
+from .imgio import ensure_dir, find_images, write_image
 from .logger import logger
-import click
 
-ROUTE = ['left', 'up', 'right', 'down']
-BINARY_MASK_FIRST = 'first_pass_binary'
-BINARY_MASK_SECOND = 'second_pass_binary'
+ROUTE = ("left", "up", "right", "down")
+BINARY_MASK_FIRST = "first_pass_binary"
+BINARY_MASK_SECOND = "second_pass_binary"
+
+#: Overlap fraction at which an image is considered aligned.
+TARGET_OVERLAP = 0.988
+
+#: Hard cap on hill-climbing rounds per image.
+MAX_ITERATIONS = 200
+
 
 def get_pad_val(current):
-    pv = 2
-    if current>0.0 and current<=0.15:
-        pv = 20
-    elif current>0.15 and current<=0.50:
-        pv = 10
-    elif current>0.5 and current<=0.70:
-        pv = 4
-    return pv
+    """Step size in pixels; coarse when far from aligned, fine when close."""
+    if 0.0 < current <= 0.15:
+        return 20
+    if 0.15 < current <= 0.50:
+        return 10
+    if 0.50 < current <= 0.70:
+        return 4
+    return 2
 
-def apply_pad(images, outdir,right, left, top, bot):
-    for f in images:
-        img = tif.imread(f)
-        dim, _ = img.shape
-        outname = os.path.join(outdir, os.path.basename(f))
-        img_out = np.pad(img, [(top,bot), (left,right)])
-        img_out = img_out[bot:dim+bot,right:dim+right]
-        tif.imwrite(outname, img_out)
 
-def pad_image(img, how, ideal, pad_value):
-    """
-    adds empty pixels of pad_value to the side of how
-    """
-    dim, _ = img.shape
-    if how=='left':
-        temp = np.pad(img, [(0,0),(pad_value, 0)])
-        temp = temp[:, :dim]
-    elif how=='right':
-        temp = np.pad(img, [(0,0),(0, pad_value)])
-        temp = temp[:, pad_value:]
-    elif how=='up':
-        temp = np.pad(img, [(pad_value,0),(0, 0)])
-        temp = temp[:dim, :]
-    elif how=='down':
-        temp = np.pad(img, [(0,pad_value),(0, 0)])
-        temp = temp[pad_value:, :]
-    return temp
+def pad_image(img, how, pad_value):
+    """Translate ``img`` by ``pad_value`` pixels, keeping the original shape."""
+    height, width = img.shape
+    if how == "left":
+        return np.pad(img, [(0, 0), (pad_value, 0)])[:, :width]
+    if how == "right":
+        return np.pad(img, [(0, 0), (0, pad_value)])[:, pad_value:]
+    if how == "up":
+        return np.pad(img, [(pad_value, 0), (0, 0)])[:height, :]
+    if how == "down":
+        return np.pad(img, [(0, pad_value), (0, 0)])[pad_value:, :]
+    raise ValueError(f"unknown direction {how!r}")
+
+
+def apply_pad(images, outdir, right, left, top, bot):
+    """Apply a net (left-right, top-bottom) translation to each image."""
+    for path in images:
+        img = tif.imread(path)
+        height, width = img.shape[:2]
+        padded = np.pad(img, [(top, bot), (left, right)])
+        # Height and width were previously both taken from shape[0], which
+        # corrupted every non-square image.
+        write_image(
+            os.path.join(outdir, os.path.basename(path)),
+            padded[bot:height + bot, right:width + right],
+        )
+
+
+def align_pair(first_path, second_path):
+    """Align one mask pair. Returns a record dict, or None if shapes differ."""
+    first = tif.imread(first_path)
+    second = tif.imread(second_path)
+    if first.shape != second.shape:
+        return None
+
+    first = (first > 0).astype(np.uint8)
+    second = (second > 0).astype(np.uint8)
+
+    ideal = int(first.sum())
+    if ideal == 0:
+        return None
+
+    current = int((first * second).sum())
+    overlap = current / ideal
+    start_overlap = overlap
+
+    offsets = {"left": 0, "right": 0, "up": 0, "down": 0}
+    iterations = 0
+    step = get_pad_val(overlap)
+
+    # Coarse-to-fine hill climb. The old loop recomputed the step purely from
+    # the current overlap and gave up after five rounds without improvement,
+    # so a coarse step that overshot the true offset could never be refined --
+    # a 6 pixel shift would stall at 10 pixel steps and never converge.
+    while overlap < TARGET_OVERLAP and step >= 1 and iterations < MAX_ITERATIONS:
+        improved = False
+        for how in ROUTE:
+            candidate = pad_image(second, how, step)
+            score = int((first * candidate).sum())
+            if score > current:
+                second = candidate
+                current = score
+                overlap = score / ideal
+                offsets[how] += step
+                improved = True
+        iterations += 1
+
+        if improved:
+            # Never coarsen again, only refine.
+            step = min(step, get_pad_val(overlap))
+        else:
+            step //= 2
+
+    return {
+        "first": first,
+        # The old code wrote `temp`, the last direction tried rather than the
+        # accepted result -- and it was unbound entirely when an image was
+        # already aligned and the loop never ran.
+        "second": second,
+        "record": {
+            "right_correction": offsets["right"],
+            "left_correction": offsets["left"],
+            "top_correction": offsets["up"],
+            "bottom_correction": offsets["down"],
+            "starting_alignment": start_overlap,
+            "ending_alignment": overlap,
+            "iterations": iterations,
+        },
+    }
+
 
 def align_images(first_pass_images, second_pass_images, output_1, output_2, channel):
-    """Aligns image in second pass to first pass
+    """Align matched mask pairs and return a DataFrame of corrections."""
+    first_binary = ensure_dir(os.path.join(output_1, BINARY_MASK_FIRST))
+    second_binary = ensure_dir(os.path.join(output_2, BINARY_MASK_SECOND))
 
-    Args:
-        first_pass_images (str): path to first pass images
-        second_pass_images (str): path to second pass images
-        output_dir (str): path to save first pass binary masks (for comparison)
-        output_dir (str): path to save second pass binary masks (for comparison)
+    if len(first_pass_images) != len(second_pass_images):
+        raise ValueError(
+            f"pass image lists differ in length: {len(first_pass_images)} vs "
+            f"{len(second_pass_images)}"
+        )
 
-    Returns:
-        pd.DataFrame: DataFrame of images and corrections
-    """
-    # assert len(first_pass_images)==len(second_pass_images), "Different Number of Images between First and Second Pass..."
-    if len(first_pass_images)==len(second_pass_images):
-        a= len(first_pass_images)
-        b = len(second_pass_images)
-        if a < b:
-            first_pass_images = first_pass_images[:a]
-            second_pass_images = second_pass_images[:a]
-        else:
-            first_pass_images = first_pass_images[:b]
-            second_pass_images = second_pass_images[:b]
+    corrections = []
+    failures = []
+    pairs = list(zip(first_pass_images, second_pass_images, strict=True))
+    for first_path, second_path in tqdm(pairs, desc="Aligning"):
+        name = os.path.basename(first_path)
+        result = align_pair(first_path, second_path)
+        if result is None:
+            failures.append({
+                "fname": name,
+                "first_shape": str(tif.imread(first_path).shape),
+                "second_shape": str(tif.imread(second_path).shape),
+            })
+            continue
 
-    frist_pass_binary = os.path.join(output_1, BINARY_MASK_FIRST)
-    second_pass_binary = os.path.join(output_2, BINARY_MASK_SECOND)
-    
-    # dataframe output corrections
-    corrections = {
-            "fname":[],
-            "image_set":[],
-            "right_correction":[],
-            "left_correction":[],
-            "top_correction":[],
-            "bottom_correction":[],
-            "starting_alignment":[],
-            "ending alignment":[],
-            "iterations":[],
-        }
-    failed_images = {
-        "fname":[],
-        'first_shape':[],
-        'second_shape':[]
-    }
-        
-    for fm, sm in zip(first_pass_images, second_pass_images):
-        print(fm, sm)
-        # Read images in and convert to binary mask
-        first = tif.imread(fm)
-        first[first>0]=1 
-        second = tif.imread(sm)
-        second[second>0]=1
+        write_image(os.path.join(first_binary, name), result["first"])
+        write_image(os.path.join(second_binary, name), result["second"])
 
-        # get output filename 
-        fname = os.path.basename(fm)
-        
-        
-        if (first.shape == second.shape):
-            # get the alignment metric
-            ideal = first.sum()
-            currrent = (first*second).sum()
-            past = currrent
-            percent_diff = currrent/ideal
+        record = {"fname": name, "image_set": name.split(channel)[0]}
+        record.update(result["record"])
+        corrections.append(record)
 
-            corrections["fname"].append(fname)
-            corrections['image_set'].append(fname.split(channel)[0])
-            corrections['starting_alignment'].append(percent_diff)
-            
-            iters = 0
-            right_cor = 0
-            left_cor = 0
-            top_cor = 0
-            bot_cor = 0
-            past_count = 0
-            while(percent_diff<0.988 and past_count<=5):
-                print("Currrent Iteration:", iters, f"Current %:{(percent_diff*100):.3f}% padding {get_pad_val(current=percent_diff)}")
-                
-                # if iters > 30:
-                #     print("DID NOT CONVERGE AFTER: ", iters, " ITERATIONS STOPPING EARLY")
-                    
-                #     break
+    pd.DataFrame(failures).to_csv(
+        os.path.join(output_2, "failed_images.csv"), index=False
+    )
+    if failures:
+        print(f"{len(failures)} image pair(s) could not be aligned; see failed_images.csv")
 
-                # iterate over the routes thru the image
-                pv = get_pad_val(current=percent_diff)
-                for how in ROUTE:
-                    # pv = get_pad_val(current=currrent)
-                    if how == 'left':
-                        temp = pad_image(second, how, first, pad_value=pv)
-                        new_percent = (first*temp).sum()
-                        if new_percent>currrent:
-                            second = temp # change the shape
-                            percent_diff = new_percent/ideal
-                            left_cor+=pv
-                            currrent = new_percent
-                    elif how == 'right':
-                        temp = pad_image(second, how, first, pad_value=pv)
-                        new_percent = (first*temp).sum()
-                        if new_percent>currrent:
-                            second = temp # change the shape
-                            percent_diff = new_percent/ideal
-                            right_cor+=pv
-                            currrent = new_percent
-                    elif how == 'up':
-                        temp = pad_image(second, how, first, pad_value=pv)
-                        new_percent = (first*temp).sum()
-                        if new_percent>currrent:
-                            second = temp # change the shape
-                            percent_diff = new_percent/ideal
-                            top_cor+=pv
-                            currrent = new_percent
-                    elif how == 'down':
-                        temp = pad_image(second, how, first, pad_value=pv)
-                        new_percent = (first*temp).sum()
-                        if new_percent>currrent:
-                            second = temp # change the shape
-                            percent_diff = new_percent/ideal
-                            bot_cor+=pv
-                            currrent = new_percent
-                if past == currrent:
-                    past_count+=1
-                else:
-                    past = currrent
-                    past_count=0
-                iters+=1
-            print("Completed with ", iters, f" with {(percent_diff*100):.3f}%")
-            corrections['ending alignment'].append(percent_diff)
-            corrections["right_correction"].append(right_cor)
-            corrections['left_correction'].append(left_cor)
-            corrections['top_correction'].append(top_cor)
-            corrections['bottom_correction'].append(bot_cor)
-            corrections['iterations'].append(iters)
-            tif.imwrite(os.path.join(frist_pass_binary, fname), first)
-            tif.imwrite(os.path.join(second_pass_binary,fname), temp)
-        else:
-            failed_images['fname'].append(fname)
-            failed_images['first_shape'].append(first.shape)
-            failed_images['second_shape'].append(second.shape)
-    failures = pd.DataFrame(data=failed_images)
-    failures.to_csv(os.path.join(output_2, 'failed_images.csv'), index=False)
-    return pd.DataFrame(data=corrections)
-    # return corrections
+    return pd.DataFrame(corrections)
+
 
 @click.command()
-@click.argument('first_pass')
-@click.argument('second_pass')
-@click.option('--diam','-d', default=0.0, help='Cell diameter')
-@click.option('--channel','-c', default='*', required=False, help='Channels to segement')
-@click.option('--model', '-m',default='cyto3', required=False, help='Model')
-@click.option('--no_edge', '-n', is_flag=True, default=False, required=False, help="Extra step to remove cells on the edge of masks")
-@click.option('--flow', '-f', default=0.4, required=False, help='Flow threshold')
-@click.option('--prob', '-p', default=0.0, required=False, help='Cell probability')
-@click.option('--color', default='grey', required=False, help='rgb value of cyto and nucleus ex. rg: red ctyo, green nuc')
-@click.option("--normalize", default=True, required=False, help='Use custom Normalize Features')
-@click.option('--denoise_model', is_flag=True, default=False, required=False, help="Change model to denoise model")
-def run(first_pass, second_pass, diam, channel, model, no_edge, flow, prob, color, normalize, denoise_model):
-    """
-    psudo code time
-    take the image folder for both passes
-    find masks
-    align
-    """
-    if os.name =='nt':
-        os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
-    assert os.path.exists(first_pass), "First Pass Image Directory Not Found"
-    assert os.path.exists(second_pass), 'Second Pass Image Directory Not Found'
-    
-    assert  diam >=0.0, "Diameter must not be zero"
-    assert  flow >= 0.0, "Flow threshold must not be zero"
-    
-    first_output = os.path.join(first_pass, 'outputs')
-    second_output = os.path.join(second_pass, 'outputs')
-    if not os.path.exists(first_output):
-        os.mkdir(first_output)
-    if not os.path.exists(second_output):
-        os.mkdir(second_output)
-    
-    first_masks = os.path.join(first_pass, 'masks')
-    second_masks = os.path.join(second_pass, 'masks')
-    
-    # first_stitched = os.path.join(first_pass, "Stitched",)
-    # second_stitched = os.path.join(second_pass, "Stitched",)
-    
-    print('Created Directories')
-    
-    print(first_output)
-    print(first_masks)
-    # print(first_stitched)
-    
-    print(second_output)
-    print(second_masks)
-    # print(second_stitched)
-    
-    print("Generating First Pass Masks...\n")
-    get_masks(first_pass, first_masks, diam=diam, channel=channel, 
-                   model=model, no_edge=no_edge, flow=flow, prob=prob,
-                   replace=False, count=False,
-                   color=color, normalize=normalize, denoise_model=denoise_model)
-    print("Generating Second Pass Masks...\n")
-    get_masks(second_pass, second_masks, diam=diam, channel=channel, 
-                   model=model, no_edge=no_edge, flow=flow, prob=prob,
-                   replace=False, count=False,
-                   color=color, normalize=normalize, denoise_model=denoise_model)
-    
-    print("Finding Alignment...")
-    first_binary = os.path.join(first_output, BINARY_MASK_FIRST)
-    second_binary = os.path.join(second_output, BINARY_MASK_SECOND)
-    if not os.path.exists(first_binary):
-        os.mkdir(first_binary)
-    if not os.path.exists(second_binary):
-        os.mkdir(second_binary)
-    
-    first_images = glob.glob(os.path.join(first_masks, f"*{channel}.tif")) # +glob.glob(os.path.join(first_masks, f"*{channel}.tiff"))
-    second_images = glob.glob(os.path.join(second_masks, f"*{channel}.tif"))  # +glob.glob(os.path.join(second_masks, f"*{channel}.tiff"))
-    
-    imgs_1 = [os.path.basename(f) for f in first_images]
-    imgs_2 = [os.path.basename(f) for f in second_images]
-    img_list = list(set(imgs_1) & set(imgs_2))
-    
-    first_pass_images = [os.path.join(first_masks, f) for f in img_list]
-    second_pass_images = [os.path.join(second_masks, f) for f in img_list]
-    
-    correction_results = align_images(first_pass_images=first_pass_images, second_pass_images=second_pass_images, 
-                                      output_1=first_output, output_2=second_output, channel=channel)
-    correction_results.to_csv(os.path.join(second_output, "corrrections_results.csv"), index=False)
-    
-    print("Applying Alignment...")
-    dest_dir = os.path.join(second_output, "aligned_images")
-    if  not os.path.exists(dest_dir):
-        os.mkdir(dest_dir)
-    rows = len(correction_results)
-    for index, row in correction_results.iterrows():
-        print(f"{index+1} of {rows}...")
-        img_set = row['image_set']
-        right = row['right_correction']
-        left = row['left_correction']
-        top = row['top_correction']
-        bot = row['bottom_correction']
-        images = glob.glob(os.path.join(second_pass, img_set+"*"))
+@click.argument("first_pass")
+@click.argument("second_pass")
+@click.option("--diam", "-d", default=0.0, help="Cell diameter in pixels; 0 disables rescaling")
+@click.option("--channel", "-c", default="*", help="Filename fragment selecting a channel")
+@click.option("--model", "-m", default=None, help="Path or name of a custom model; omit for Cellpose-SAM")
+@click.option("--no_edge", "-n", is_flag=True, default=False, help="Remove objects touching the image edge")
+@click.option("--flow", "-f", default=0.4, help="Flow threshold")
+@click.option("--prob", "-p", default=0.0, help="Cell probability threshold")
+@click.option("--normalize", default=None, help="Path to a normalize parameter JSON")
+@click.option("--batch", "-b", default=8, help="Cellpose batch size")
+@click.option("--gpu/--no-gpu", default=True, help="Use CUDA if available")
+def run(first_pass, second_pass, diam, channel, model, no_edge, flow, prob,
+        normalize, batch, gpu):
+    """Segment FIRST_PASS and SECOND_PASS, then align the second to the first."""
+    if os.name == "nt":
+        os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+    for path in (first_pass, second_pass):
+        if not os.path.isdir(path):
+            raise click.ClickException(f"Image directory does not exist: {path}")
+
+    first_output = ensure_dir(os.path.join(first_pass, "outputs"))
+    second_output = ensure_dir(os.path.join(second_pass, "outputs"))
+    first_masks = os.path.join(first_pass, "masks")
+    second_masks = os.path.join(second_pass, "masks")
+
+    logger(
+        second_output,
+        {"first_pass": first_pass, "second_pass": second_pass, "channel": channel,
+         "model": model, "diam": diam, "flow": flow, "prob": prob},
+        command="align_images",
+    )
+
+    mask_kwargs = dict(
+        diam=diam, channel=channel, model=model, no_edge=no_edge, flow=flow,
+        prob=prob, replace=False, count=False, normalize=normalize,
+        batch=batch, gpu=gpu,
+    )
+    print("Generating first pass masks...")
+    get_masks(first_pass, first_masks, **mask_kwargs)
+    print("Generating second pass masks...")
+    get_masks(second_pass, second_masks, **mask_kwargs)
+
+    print("Finding alignment...")
+    shared = sorted(
+        {os.path.basename(f) for f in find_images(first_masks, channel=channel)}
+        & {os.path.basename(f) for f in find_images(second_masks, channel=channel)}
+    )
+    if not shared:
+        raise click.ClickException("No masks with matching filenames between the two passes")
+
+    corrections = align_images(
+        [os.path.join(first_masks, name) for name in shared],
+        [os.path.join(second_masks, name) for name in shared],
+        output_1=first_output,
+        output_2=second_output,
+        channel=channel,
+    )
+    corrections.to_csv(os.path.join(second_output, "correction_results.csv"), index=False)
+    if corrections.empty:
+        raise click.ClickException("No image pairs were aligned; nothing to apply")
+
+    print("Applying alignment...")
+    dest_dir = ensure_dir(os.path.join(second_output, "aligned_images"))
+    for _, row in tqdm(corrections.iterrows(), total=len(corrections), desc="Applying"):
+        images = find_images(second_pass, channel="*")
+        images = [f for f in images if os.path.basename(f).startswith(row["image_set"])]
         apply_pad(
-            images, outdir=dest_dir, 
-            right=right,
-            left=left,
-            top=top,
-            bot=bot
-            )
+            images,
+            outdir=dest_dir,
+            right=int(row["right_correction"]),
+            left=int(row["left_correction"]),
+            top=int(row["top_correction"]),
+            bot=int(row["bottom_correction"]),
+        )
+    print(f"Wrote aligned images to {dest_dir}")
