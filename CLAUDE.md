@@ -12,7 +12,7 @@ Commands are declared in `pyproject.toml` under `[project.scripts]`. There is no
 
 ```bash
 pip install -e ".[dev]"     # re-run after touching [project.scripts]
-pytest                      # 70 tests, no GPU or model weights needed
+pytest                      # 75 tests, no GPU or model weights needed
 pytest tests/test_align.py::test_align_pair_recovers_a_known_shift   # single test
 ruff check cellimgs tests
 ```
@@ -31,13 +31,13 @@ CI (`.github/workflows/ci.yml`) runs ruff, pytest on Python 3.10 and 3.12, and a
 - `stack_files(df, well, field, channel, on=)` → ordered paths for one stack.
 - `stack_name(well, field, channel)` → `A01_F001_C01.tif`, the canonical output name shared by `stack-imgs` and `smashtif`.
 
-The `STACK` scope exists so this package's own output can be fed back into `get-wellcounts`. If you change `stack_name`, change the `STACK` pattern to match.
+Scopes are `CV8000`, `CQ1`, `CX5` (Cellomics ArrayScan), `STICH` and `STACK`. The `STACK` scope exists so this package's own output can be fed back into `get-wellcounts` — if you change `stack_name`, change the `STACK` pattern to match. Adding a scope means adding the pattern, a test, and the row in the README table; `normalize_scope` handles casing and the `CV800` alias.
 
 `cellimgs/imgio.py` holds the shared filesystem and array helpers: `ensure_dir` (never `os.mkdir` — it fails on nested paths), `find_images`, `read_stack`, `write_stack`, `max_project`, `count_labels`. `read_stack` allocates with the source dtype; allocating with `np.zeros`/`np.ones` silently promotes plate data to float64.
 
 `write_stack` passes `photometric="minisblack"`. Without it, tifffile stores a 3-plane Z-stack as an RGB image with separate components.
 
-**All TIF output goes through `write_image`/`write_stack`**, which apply `imgio.COMPRESSION` (`"lzw"`). Never call `tif.imwrite` directly from a command — that is how output silently reverts to uncompressed. LZW is required: it is lossless, CellProfiler 4 reads it natively, and it shrinks label masks ~28x, which matters because output lands on a network mount.
+**All TIF output goes through `write_image`/`write_stack`**, which apply `imgio.COMPRESSION` (`"lzw"`). Never call `tif.imwrite` directly from a command — that is how output silently reverts to uncompressed. LZW is required: it is lossless, CellProfiler 4 reads it natively, and it shrinks label masks ~27x, which matters because output lands on a network mount.
 
 **Lazy imports.** `cellimgs/__init__.py` deliberately imports nothing, and `gen_masks.py` imports cellpose inside functions. The previous `__init__.py` imported every submodule, so one missing dependency broke all eleven console scripts at once. `logger.py` must stay dependency-free — it used to import cellpose and torch for six lines of file writing, and every CLI paid that startup cost.
 
