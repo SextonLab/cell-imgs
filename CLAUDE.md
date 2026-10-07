@@ -12,7 +12,7 @@ Commands are declared in `pyproject.toml` under `[project.scripts]`. There is no
 
 ```bash
 pip install -e ".[dev]"     # re-run after touching [project.scripts]
-pytest                      # 75 tests, no GPU or model weights needed
+pytest                      # 81 tests, no GPU or model weights needed
 pytest tests/test_align.py::test_align_pair_recovers_a_known_shift   # single test
 ruff check cellimgs tests
 ```
@@ -30,6 +30,7 @@ CI (`.github/workflows/ci.yml`) runs ruff, pytest on Python 3.10 and 3.12, and a
 - `iter_groups(df)` → `(well, field, channel)` tuples, computed **per well**. Global field lists produce empty groups on ragged plates.
 - `stack_files(df, well, field, channel, on=)` → ordered paths for one stack.
 - `stack_name(well, field, channel)` → `A01_F001_C01.tif`, the canonical output name shared by `stack-imgs` and `smashtif`.
+- `pair_channels(first, second, scope)` → `(pairs, unpaired)`, matching two channels on `PAIR_KEY` (plate, well, timepoint, field, location, Z). Use it rather than stripping the channel from the filename: the CV8000 gives each channel its own action number, so `...A01Z01C04` and `...A04Z01C01` never match by name. `gen-masks --nuc-channel` uses it.
 
 Scopes are `CV8000`, `CQ1`, `CX5` (Cellomics ArrayScan), `STICH` and `STACK`. The `STACK` scope exists so this package's own output can be fed back into `get-wellcounts` — if you change `stack_name`, change the `STACK` pattern to match. Adding a scope means adding the pattern, a test, and the row in the README table; `normalize_scope` handles casing and the `CV800` alias.
 
@@ -52,6 +53,8 @@ Pinned to **Cellpose 4** (`cellpose>=4.0`, tested against 4.2.1.1). Three v3 API
 `gen_masks.resolve_model` rejects v3 zoo names with a `BadParameter` rather than letting them be ignored — extend `LEGACY_MODELS` if more surface. `eval()` returns 3 values. `utils.remove_edge_masks`, `utils.outlines_list` and `models.normalize_default` all still exist.
 
 `gen_masks.get_masks` is the reusable function; `generate_masks` is the thin Click wrapper, and `align_all.run` calls `get_masks` directly rather than shelling out. It computes the work list before constructing the model, so a fully-cached directory never touches the GPU.
+
+`--nuc-channel` builds the 2-channel input in memory (`read_input`, cell first, nucleus second, `channel_axis=-1`) and names the mask after the cell image. It rejects `--channel-axis` and `--do-3d`. Cellpose 4's 3D path requires `z_axis`, which `get_masks` does not pass.
 
 ## Alignment
 
