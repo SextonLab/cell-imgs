@@ -1,7 +1,9 @@
 """Tests for the Cellpose 4 migration that do not need a GPU or model weights."""
 
 import click
+import numpy as np
 import pytest
+import tifffile as tif
 
 from cellimgs import gen_masks
 
@@ -50,3 +52,66 @@ def test_missing_images_raises_before_loading_the_model(tmp_path):
     empty.mkdir()
     with pytest.raises(click.ClickException, match="No .tif/.tiff images"):
         gen_masks.get_masks(str(empty), str(tmp_path / "masks"))
+
+
+class FakeModel:
+    """Stands in for CellposeModel: records each eval call, returns one object."""
+
+    def __init__(self):
+        self.calls = []
+
+    def eval(self, img, **kwargs):
+        self.calls.append((img, kwargs))
+        masks = np.zeros(img.shape[:2], dtype=np.int32)
+        masks[2:5, 2:5] = 1
+        return masks, None, None
+
+
+@pytest.fixture
+def fake_model(monkeypatch):
+    model = FakeModel()
+    monkeypatch.setattr(gen_masks, "build_model", lambda *args: model)
+    return model
+
+
+@pytest.fixture
+def cell_nuc_plate(tmp_path, plane_writer):
+    """CV8000 cell (C04, action 01) and nuclear (C01, action 04) planes.
+    Field 2 has no nuclear image."""
+    src = tmp_path / "plate"
+    plane_writer(src / "plate1_A01_T0001F001L01A01Z01C04.tif", value=4)
+    plane_writer(src / "plate1_A01_T0001F001L01A04Z01C01.tif", value=1)
+    plane_writer(src / "plate1_A01_T0001F002L01A01Z01C04.tif", value=4)
+    return src
+
+
+def test_nuc_channel_segments_cell_and_nucleus_together(tmp_path, cell_nuc_plate, fake_model):
+    out = tmp_path / "masks"
+    gen_masks.get_masks(str(cell_nuc_plate), str(out), channel="C04", nuc_channel="C01")
+
+    assert len(fake_model.calls) == 1, "field 2 has no nuclear image and must be skipped"
+    img, kwargs = fake_model.calls[0]
+    assert img.shape == (16, 20, 2)
+    assert (img[..., 0] == 4).all() and (img[..., 1] == 1).all(), "cell channel first, nucleus second"
+    assert kwargs["channel_axis"] == -1
+    assert sorted(p.name for p in out.glob("*.tif")) == ["plate1_A01_T0001F001L01A01Z01C04.tif"]
+    assert tif.imread(out / "plate1_A01_T0001F001L01A01Z01C04.tif").dtype == np.uint16
+
+
+def test_nuc_channel_requires_a_cell_channel(tmp_path, cell_nuc_plate):
+    with pytest.raises(click.BadParameter, match="--channel"):
+        gen_masks.get_masks(str(cell_nuc_plate), str(tmp_path / "masks"), nuc_channel="C01")
+
+
+@pytest.mark.parametrize("extra", [{"channel_axis": 0}, {"do_3d": True}])
+def test_nuc_channel_rejects_conflicting_options(tmp_path, cell_nuc_plate, extra):
+    with pytest.raises(click.BadParameter):
+        gen_masks.get_masks(
+            str(cell_nuc_plate), str(tmp_path / "masks"), channel="C04", nuc_channel="C01", **extra
+        )
+
+
+def test_nuc_channel_without_any_partner_raises_before_loading_the_model(tmp_path, cell_nuc_plate):
+    with pytest.raises(click.ClickException, match="matching C02"):
+        gen_masks.get_masks(str(cell_nuc_plate), str(tmp_path / "masks"), channel="C04", nuc_channel="C02")
+    assert not (tmp_path / "masks").exists()

@@ -70,6 +70,9 @@ COLUMNS = (
 #: contained a number.
 NUMERIC = ("timepoint", "field_id", "location", "zstack", "channel")
 
+#: Columns that identify one acquisition across its channels.
+PAIR_KEY = ("plate_id", "well_id", "timepoint", "field_id", "location", "zstack")
+
 _WELL_SPLIT = re.compile(r"^([A-Za-z]+)0*(\d+)$")
 
 
@@ -159,6 +162,32 @@ def stack_files(df, well, field, channel, on="z", field_column="field_id"):
         & (df["channel"] == channel)
     ]
     return rows.sort_values(axis)["path"].tolist()
+
+
+def pair_channels(first, second, scope):
+    """Pair each path in ``first`` with the path in ``second`` from the same
+    acquisition (plate, well, timepoint, field, location and Z).
+
+    Returns ``(pairs, unpaired)``: a list of ``(first, second)`` paths, and the
+    number of ``first`` paths with no partner.
+
+    Pairing on parsed metadata rather than on the filename minus its channel
+    matters on the CV8000, whose action number differs per channel
+    (``...A01Z01C04`` versus ``...A04Z01C01``), so the stripped names never match.
+    """
+    partners = {
+        tuple(row[column] for column in PAIR_KEY): row["path"]
+        for _, row in build_table(second, scope).iterrows()
+    }
+    pairs = []
+    unpaired = 0
+    for _, row in build_table(first, scope).iterrows():
+        partner = partners.get(tuple(row[column] for column in PAIR_KEY))
+        if partner is None:
+            unpaired += 1
+        else:
+            pairs.append((row["path"], partner))
+    return pairs, unpaired
 
 
 def iter_groups(df, field_column="field_id"):

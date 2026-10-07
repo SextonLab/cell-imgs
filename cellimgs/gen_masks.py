@@ -25,6 +25,7 @@ from tqdm import tqdm
 
 from .imgio import count_labels, ensure_dir, find_images, write_image
 from .logger import logger
+from .metadata import SCOPES, normalize_scope, pair_channels
 
 #: Built-in model names from the Cellpose 3 zoo. These no longer exist in v4,
 #: and passing one used to be silently ignored, so reject them loudly.
@@ -70,6 +71,42 @@ def load_normalize(normalize):
         return json.load(handle)
 
 
+def pair_nuclear(imgdir, files, channel, nuc_channel, scope):
+    """Pair each ``channel`` image with its ``nuc_channel`` image, for --nuc-channel."""
+    if channel == "*":
+        raise click.BadParameter(
+            "set --channel to the cell channel (e.g. C04) when using --nuc-channel",
+            param_hint="--channel",
+        )
+    try:
+        scope = normalize_scope(scope)
+    except ValueError as error:
+        raise click.BadParameter(str(error), param_hint="--scope") from error
+
+    pairs, unpaired = pair_channels(files, find_images(imgdir, channel=nuc_channel), scope)
+    if unpaired:
+        print(f"Warning: skipping {unpaired} image(s) with no matching {nuc_channel} image.")
+    if not pairs:
+        raise click.ClickException(
+            f"No {channel} image in {imgdir} has a matching {nuc_channel} image under the {scope} naming pattern"
+        )
+    return pairs
+
+
+def read_input(paths):
+    """Read one image, or stack a cell image and its nuclear image as channels
+    (cell first, nucleus second) along a new last axis."""
+    if len(paths) == 1:
+        return tif.imread(paths[0])
+    planes = [tif.imread(path) for path in paths]
+    if planes[0].shape != planes[1].shape:
+        raise click.ClickException(
+            f"{paths[0]} has shape {planes[0].shape} but its nuclear image "
+            f"{paths[1]} has shape {planes[1].shape}"
+        )
+    return np.stack(planes, axis=-1)
+
+
 def build_model(pretrained_model, gpu):
     """Construct the Cellpose model, importing cellpose lazily."""
     from cellpose import models
@@ -107,9 +144,15 @@ def get_masks(
     min_size=15,
     do_3d=False,
     anisotropy=None,
+    nuc_channel=None,
+    scope="CV8000",
     gpu=True,
 ):
     """Segment every image in ``imgdir`` and write uint16 label masks.
+
+    With ``nuc_channel``, each ``channel`` image is segmented together with its
+    nuclear image as a 2-channel input, and the mask is named after the
+    ``channel`` image.
 
     Returns the path of the counts CSV when ``count`` is set, else ``None``.
     """
@@ -127,6 +170,19 @@ def get_masks(
     if diam < 0:
         raise click.BadParameter("diameter must not be negative", param_hint="--diam")
 
+    if nuc_channel:
+        if channel_axis is not None:
+            raise click.BadParameter(
+                "--nuc-channel builds the 2-channel input itself; drop --channel-axis",
+                param_hint="--channel-axis",
+            )
+        if do_3d:
+            raise click.BadParameter("--nuc-channel does not support --do-3d", param_hint="--do-3d")
+        sources = pair_nuclear(imgdir, files, channel, nuc_channel, scope)
+        channel_axis = -1
+    else:
+        sources = [(path,) for path in files]
+
     ensure_dir(outdir)
     pretrained_model = resolve_model(model)
     normalize_value = load_normalize(normalize)
@@ -137,10 +193,12 @@ def get_masks(
         {
             "imgdir": imgdir,
             "outdir": outdir,
-            "images": len(files),
+            "images": len(sources),
             "model": pretrained_model or "cpsam_v2 (Cellpose-SAM default)",
             "diameter": diameter,
             "channel": channel,
+            "nuc_channel": nuc_channel,
+            "scope": scope if nuc_channel else None,
             "channel_axis": channel_axis,
             "flow_threshold": flow,
             "cellprob_threshold": prob,
@@ -158,11 +216,11 @@ def get_masks(
     # Work out what actually needs segmenting before paying to load the model
     # onto the GPU.
     todo = [
-        (path, os.path.join(outdir, os.path.basename(path)))
-        for path in files
-        if replace or not os.path.exists(os.path.join(outdir, os.path.basename(path)))
+        (paths, os.path.join(outdir, os.path.basename(paths[0])))
+        for paths in sources
+        if replace or not os.path.exists(os.path.join(outdir, os.path.basename(paths[0])))
     ]
-    skipped = len(files) - len(todo)
+    skipped = len(sources) - len(todo)
     if skipped:
         print(f"Skipping {skipped} image(s) with masks that already exist.")
     if not todo:
@@ -174,8 +232,9 @@ def get_masks(
     model_obj = build_model(pretrained_model, gpu)
 
     cell_count = {"image": [], "count": []}
-    for source, target in tqdm(todo, desc="Segmenting"):
-        img = tif.imread(source)
+    for paths, target in tqdm(todo, desc="Segmenting"):
+        source = paths[0]
+        img = read_input(paths)
         masks, _flows, _styles = model_obj.eval(
             img,
             batch_size=batch,
@@ -229,6 +288,11 @@ def get_masks(
 @click.option("--min-size", default=15, help="Discard objects smaller than this many pixels")
 @click.option("--do-3d", is_flag=True, default=False, help="Segment 3D stacks volumetrically")
 @click.option("--anisotropy", default=None, type=float, help="Z:XY sampling ratio for --do-3d")
+@click.option(
+    "--nuc-channel", default=None,
+    help="Nuclear channel fragment, e.g. C01, segmented together with --channel for whole-cell masks",
+)
+@click.option("--scope", "-s", default="CV8000", help=f"Naming convention for pairing --nuc-channel {list(SCOPES)}")
 @click.option("--gpu/--no-gpu", default=True, help="Use CUDA if available")
 def generate_masks(**kwargs):
     """Generate Cellpose label masks for every image in IMGDIR into OUTDIR."""

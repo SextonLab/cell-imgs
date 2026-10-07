@@ -104,3 +104,20 @@ def test_iter_groups_is_per_well(tmp_path):
 
 def test_stack_name_is_stable():
     assert metadata.stack_name("A01", 2, 3) == "A01_F002_C03.tif"
+
+
+def test_pair_channels_matches_across_cv8000_action_numbers():
+    """On the CV8000 each channel has its own action number, so the cell and
+    nuclear names differ by more than the channel and must be paired on metadata."""
+    cell = [
+        "/d/plate1_A01_T0001F001L01A01Z01C04.tif",
+        "/d/plate1_A01_T0001F002L01A01Z01C04.tif",
+        "/d/plate1_B02_T0001F001L01A01Z01C04.tif",
+    ]
+    nuc = [
+        "/d/plate1_A01_T0001F002L01A04Z01C01.tif",
+        "/d/plate1_A01_T0001F001L01A04Z01C01.tif",
+    ]
+    pairs, unpaired = metadata.pair_channels(cell, nuc, "CV8000")
+    assert pairs == [(cell[0], nuc[1]), (cell[1], nuc[0])]
+    assert unpaired == 1

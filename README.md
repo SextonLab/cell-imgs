@@ -89,7 +89,7 @@ Development tools and the test suite:
 
 ```bash
 pip install -e ".[dev]"
-pytest          # 75 tests, no GPU or model weights required
+pytest          # 81 tests, no GPU or model weights required
 ruff check cellimgs tests
 ```
 
@@ -99,7 +99,7 @@ ruff check cellimgs tests
 pip show cellimgs | head -3
 ```
 
-Expect `Version: 1.0.0`. To confirm you are on the Cellpose 4 code rather than
+Expect `Version: 1.1.0`. To confirm you are on the Cellpose 4 code rather than
 an older checkout, check for a flag that only exists in this version:
 
 ```bash
@@ -219,10 +219,36 @@ into `maskdir`.
 | `--min-size` | Discard objects below this pixel area. Default `15`. |
 | `--do-3d` | Segment a 3D stack volumetrically. |
 | `--anisotropy` | Z:XY sampling ratio, used with `--do-3d`. |
+| `--nuc-channel` | Nuclear channel to segment together with `-c` for whole-cell masks. See below. |
+| `-s`, `--scope` | Naming convention used to pair `--nuc-channel` images. Default `CV8000`. |
 | `--gpu` / `--no-gpu` | Use CUDA if available. Default `--gpu`. |
 
 Set `-c` deliberately. The default matches every TIF in the directory, which on
 a raw microscope export includes instrument calibration frames.
+
+#### Whole-cell masks from a cell stain plus a nuclear stain
+
+When the cell stain (phalloidin, CellMask, ...) and the nuclear stain are
+separate single-channel files, segment nuclei on their own and whole cells
+from both channels together:
+
+```bash
+gen-masks imgdir/ Masks/ -c C01                    # nuclei, named like the C01 images
+gen-masks imgdir/ Masks/ -c C04 --nuc-channel C01  # cells, named like the C04 images
+```
+
+With `--nuc-channel`, each `-c` image is paired with the nuclear image from the
+same well, field, timepoint and Z, stacked in memory as a 2-channel input (cell
+first, nucleus second), and segmented in one pass. Nothing is written to disk
+but the mask, which takes the name of the `-c` image, so both runs can share
+one output folder. Images are paired on the filename metadata of `--scope`,
+not on the filename with the channel removed, because the CV8000 gives each
+channel its own action number (`...A01Z01C04.tif` pairs with `...A04Z01C01.tif`).
+Images with no nuclear partner are skipped and counted. `--nuc-channel` cannot
+be combined with `--channel-axis` or `--do-3d`.
+
+If both runs write to one folder, pass `--count` to only one of them, since
+each writes `counts.csv`; or count afterwards with `get-imgcounts -c`.
 
 `normal-params -o/--output my_params.json` writes Cellpose's default
 normalization parameters for you to edit and pass back via `--normalize`.
